@@ -1,0 +1,59 @@
+/* Sitio público MEC (reutiliza variables de crm.css) */
+body.web{background:var(--bg)}
+body.web::before{display:none}
+.wrap{max-width:1140px;margin:0 auto;padding:0 20px}
+#site-nav{position:sticky;top:0;z-index:20;background:rgba(7,9,13,.82);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.navbar{display:flex;align-items:center;gap:16px;min-height:64px}
+.nav-brand{display:flex;align-items:center;gap:10px;color:var(--text);font:700 1.02rem var(--display);letter-spacing:.04em;margin-right:auto}
+.nav-brand:hover{text-decoration:none}
+.nav-links{display:flex;gap:6px;align-items:center;list-style:none;margin:0;padding:0}
+.nav-links a{color:var(--muted);padding:8px 12px;border-radius:8px;font-weight:600;font-size:.92rem}
+.nav-links a:hover,.nav-links a[aria-current]{color:var(--text);background:rgba(58,160,255,.1);text-decoration:none}
+.nav-links a.btn{color:#fff;background:var(--blue);margin-left:6px}
+.nav-toggle{display:none;background:none;border:1px solid var(--line-2);color:var(--text);border-radius:8px;font-size:1.2rem;padding:4px 10px;cursor:pointer}
+@media (max-width:860px){.nav-toggle{display:block}.nav-links{display:none;position:absolute;left:0;right:0;top:64px;flex-direction:column;align-items:stretch;background:#07090d;border-bottom:1px solid var(--line);padding:10px 20px}
+ #site-nav.open .nav-links{display:flex}.nav-links a.btn{margin:6px 0 0;text-align:center;justify-content:center}}
+.hero{position:relative;min-height:calc(100vh - 64px);display:flex;align-items:center;overflow:hidden;
+ background:url(../img/web/paisaje.svg) center bottom/cover no-repeat,#07090d}
+.hero::after{content:"";position:absolute;inset:auto 0 0 0;height:120px;background:linear-gradient(transparent,var(--bg))}
+.hero-grid{position:relative;z-index:1;display:grid;grid-template-columns:1.1fr .9fr;gap:30px;align-items:center;padding:40px 20px 80px}
+.hero h1{font:800 clamp(2.2rem,5.4vw,4rem)/1.05 var(--display);letter-spacing:.03em;margin:0 0 14px;text-shadow:0 2px 24px rgba(0,0,0,.6)}
+.hero .lead{font-size:1.15rem;color:#c8d3e1;max-width:34em}
+.kicker{display:inline-block;font:700 .78rem var(--body);letter-spacing:.22em;text-transform:uppercase;color:var(--blue);margin-bottom:12px}
+.mascota{width:100%;max-width:440px;justify-self:center;filter:drop-shadow(0 20px 40px rgba(0,0,0,.7)) drop-shadow(0 0 60px rgba(58,160,255,.18))}
+.btn.lg{font-size:1.05rem;padding:14px 26px;border-radius:12px}
+.btn.red{background:#c41f25}.btn.red:hover{background:#e4242b}
+.cta-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px}
+section.sec{padding:70px 0;position:relative}
+section.sec h2{font:800 clamp(1.5rem,3vw,2.2rem) var(--display);letter-spacing:.03em}
+.rune-div{color:rgba(58,160,255,.35);letter-spacing:.8em;font-size:1rem;text-align:center;margin:0 0 20px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:26px;align-items:center}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.muted{color:var(--muted)}
+.ciclo{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:18px}
+.ciclo .card h3{font:700 1rem var(--display);color:var(--blue)}
+#globo{width:100%;max-width:460px;aspect-ratio:1;display:block;margin:0 auto}
+.testimonio{position:relative;text-align:center;margin:0}
+.testimonio .avatar{width:96px;height:96px;margin:0 auto 12px;display:block}
+.testimonio blockquote{margin:0 0 12px;font-style:italic;color:#d3dce8}
+.ejemplo{position:absolute;top:10px;right:12px;font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--warn);border:1px solid rgba(231,176,74,.5);border-radius:20px;padding:1px 8px}
+.prose h3{font:700 1.15rem var(--display);color:var(--text);margin-top:1.6em}
+.prose li{margin:.35em 0}
+table.niveles{width:100%;border-collapse:collapse;margin-top:12px}
+table.niveles th,table.niveles td{border-bottom:1px solid var(--line);padding:10px;text-align:left}
+table.niveles th{color:var(--muted);font-weight:600;font-size:.85rem;text-transform:uppercase;letter-spacing:.08em}
+table.niveles tfoot td{font-weight:700;color:var(--blue)}
+.libro{display:grid;grid-template-columns:150px 1fr;gap:18px;align-items:start}
+.libro img{width:150px;height:auto;border-radius:6px;border:1px solid var(--line-2);box-shadow:0 10px 30px rgba(0,0,0,.5)}
+.staff-card{text-align:center}.staff-card img,.staff-card svg{width:180px;height:180px;border-radius:50%;border:2px solid var(--line-2);object-fit:cover;margin:0 auto 14px;display:block;background:#16202d}
+.contact-big{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:26px}
+.contact-big a{display:flex;flex-direction:column;align-items:center;gap:12px;padding:34px 18px;border-radius:16px;border:1px solid var(--line);background:var(--panel);color:var(--text);font:700 1.2rem var(--display);transition:transform .15s,border-color .15s}
+.contact-big a:hover{transform:translateY(-3px);border-color:var(--blue);text-decoration:none}
+.contact-big svg{width:54px;height:54px}
+.page-head{padding:56px 0 20px;background:url(../img/web/paisaje.svg) center 80%/cover no-repeat;border-bottom:1px solid var(--line)}
+.page-head h1{font:800 clamp(1.8rem,4vw,2.8rem) var(--display);text-shadow:0 2px 18px rgba(0,0,0,.6)}
+footer.site{border-top:1px solid var(--line);padding:30px 0;color:var(--dim);font-size:.85rem;text-align:center}
+[data-pending]{outline:1px dashed rgba(231,176,74,.0)}
+@media (max-width:860px){.hero-grid,.grid2{grid-template-columns:1fr}.grid3,.ciclo,.contact-big{grid-template-columns:1fr}.mascota{max-width:300px}.hero-grid{padding-top:24px;text-align:left}.libro{grid-template-columns:110px 1fr}.libro img{width:110px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
