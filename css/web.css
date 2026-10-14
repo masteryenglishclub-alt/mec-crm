@@ -57,3 +57,51 @@ footer.site{border-top:1px solid var(--line);padding:30px 0;color:var(--dim);fon
 [data-pending]{outline:1px dashed rgba(231,176,74,.0)}
 @media (max-width:860px){.hero-grid,.grid2{grid-template-columns:1fr}.grid3,.ciclo,.contact-big{grid-template-columns:1fr}.mascota{max-width:300px}.hero-grid{padding-top:24px;text-align:left}.libro{grid-template-columns:110px 1fr}.libro img{width:110px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+.precios{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:18px}
+.plan{position:relative;text-align:center;padding:46px 18px 22px}
+.plan .badge{position:absolute;top:-16px;right:14px;background:#c41f25;color:#fff;font:800 1.5rem var(--display);padding:8px 14px;border-radius:12px;box-shadow:0 6px 20px rgba(228,36,43,.45);transform:rotate(3deg)}
+.plan .badge small{display:block;font:700 .62rem var(--body);letter-spacing:.14em}
+.plan h3{font:800 1.3rem var(--display);margin:0 0 4px}
+.plan .cnt{color:var(--muted);font-size:.9rem;margin-bottom:12px}
+.plan .antes{color:var(--dim);text-decoration:line-through;font-size:.95rem}
+.plan .cop{font:800 1.9rem var(--display);color:var(--text);margin:2px 0}
+.plan .otras{color:var(--muted);font-size:.85rem}
+.plan .xclase{margin-top:8px;color:var(--ok);font-weight:700;font-size:.9rem}
+.plan.top{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue) inset}
+.suelta{display:inline-block;margin-top:8px;padding:8px 14px;border:1px dashed var(--line-2);border-radius:10px;color:var(--muted)}
+.tabs-precio{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 0}
+.nota{font-size:.8rem;color:var(--dim);margin-top:24px}
+@media (max-width:860px){.precios{grid-template-columns:1fr}}
+/* ===== Ornamentos nórdicos (estilo Practice Book A1: banda de nudo rojo/azul, anillos, glifos tipo runa) ===== */
+.knot-band{height:20px;background:#0b0f14 url(../img/web/orn/banda-nudo.svg) repeat-x center/40px 20px;border-top:1px solid #c9a15e55;border-bottom:1px solid #c9a15e55}
+#site-nav{border-bottom:0}#site-nav::after{content:"";display:block;height:14px;background:#0b0f14 url(../img/web/orn/banda-nudo.svg) repeat-x center/28px 14px;border-top:1px solid #c9a15e44}
+.page-head{border-bottom:0;position:relative}.page-head::after{content:"";position:absolute;left:0;right:0;bottom:0;height:20px;background:#0b0f14 url(../img/web/orn/banda-nudo.svg) repeat-x center/40px 20px;border-top:1px solid #c9a15e55}
+.page-head{padding-bottom:50px}
+section.sec h2{position:relative;padding-bottom:26px}
+section.sec h2::after{content:"";position:absolute;left:0;bottom:0;width:240px;max-width:80%;height:30px;background:url(../img/web/orn/divisor.svg) left center/contain no-repeat}
+.rune-div{font-size:0;height:26px;background:url(../img/web/orn/runas.svg) center/auto 22px no-repeat;opacity:.45;margin:0 0 18px}
+.card{position:relative}
+.card::before,.card::after{content:"";position:absolute;width:30px;height:30px;background:url(../img/web/orn/esquina.svg) center/contain no-repeat;pointer-events:none;opacity:.95}
+.card::before{top:-6px;left:-6px}.card::after{bottom:-6px;right:-6px;transform:rotate(180deg)}
+footer.site{border-top:0;padding-top:0}footer.site::before{content:"";display:block;height:20px;margin-bottom:24px;background:#0b0f14 url(../img/web/orn/banda-nudo.svg) repeat-x center/40px 20px;border-top:1px solid #c9a15e55;border-bottom:1px solid #c9a15e55}
+.medallon{width:58px;height:58px;display:block;margin:0 auto 10px;background:url(../img/web/orn/medallon.svg) center/contain no-repeat}
+.hero{background:url(../img/web/paisaje.svg) center bottom/cover no-repeat,#03070a}
+.hero::before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(3,7,10,.75),rgba(3,7,10,.15) 60%);z-index:0}
+.plan .badge{z-index:2}
+/* Kids: variante colorida */
+body.kids{--blue:#2fb6ff}
+body.kids .page-head{background:linear-gradient(135deg,rgba(255,196,0,.18),rgba(47,182,255,.18),rgba(60,207,142,.18)),url(../img/web/paisaje.svg) center 80%/cover no-repeat}
+body.kids .kicker{color:#ffcc33}
+body.kids section.sec h2{color:#ffe08a}
+body.kids .prose h3{color:#7fdcff}
+.kids-hero{display:grid;grid-template-columns:1fr 280px;gap:24px;align-items:center}
+.kids-hero img{width:100%;max-width:280px;filter:drop-shadow(0 12px 30px rgba(47,182,255,.35))}
+.colores{display:flex;gap:6px;margin:6px 0 0}.colores i{width:28px;height:6px;border-radius:3px;display:block}
+.galeria{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.galeria .slot{aspect-ratio:4/3;border:2px dashed #33445a;border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:.85rem;background:rgba(255,255,255,.02)}
+.vacio{text-align:center;padding:36px 20px}
+.vacio .big{font:800 2rem var(--display);color:var(--text);margin:6px 0}
+.mat-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+.mat-item{display:flex;flex-direction:column;gap:6px}
+.mat-item .acciones{display:flex;gap:8px;margin-top:auto}
+@media (max-width:860px){.kids-hero{grid-template-columns:1fr}.galeria{grid-template-columns:repeat(2,1fr)}}
