@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMax slice">
+<defs>
+<linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#04060a"/><stop offset=".55" stop-color="#0b1622"/><stop offset="1" stop-color="#132232"/></linearGradient>
+<linearGradient id="au1" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#3ccf8e" stop-opacity="0"/><stop offset=".4" stop-color="#3ccf8e" stop-opacity=".35"/><stop offset=".7" stop-color="#3aa0ff" stop-opacity=".3"/><stop offset="1" stop-color="#3aa0ff" stop-opacity="0"/></linearGradient>
+<linearGradient id="au2" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#a989e6" stop-opacity="0"/><stop offset=".5" stop-color="#a989e6" stop-opacity=".22"/><stop offset="1" stop-color="#3aa0ff" stop-opacity="0"/></linearGradient>
+<linearGradient id="water" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0f2233"/><stop offset="1" stop-color="#05080c"/></linearGradient>
+<filter id="blur"><feGaussianBlur stdDeviation="18"/></filter>
+</defs>
+<rect width="1600" height="900" fill="url(#sky)"/>
+<g fill="#fff" opacity=".6"><circle cx="120" cy="80" r="1.2"/><circle cx="340" cy="140" r="1"/><circle cx="520" cy="60" r="1.4"/><circle cx="760" cy="110" r="1"/><circle cx="980" cy="50" r="1.3"/><circle cx="1180" cy="130" r="1"/><circle cx="1400" cy="70" r="1.5"/><circle cx="1520" cy="160" r="1"/><circle cx="640" cy="200" r=".9"/><circle cx="1300" cy="220" r=".9"/><circle cx="220" cy="230" r=".9"/></g>
+<g filter="url(#blur)"><path d="M-50 260 C300 120 600 330 900 190 S1400 120 1650 230 L1650 320 C1350 220 1100 330 850 290 S300 260 -50 360z" fill="url(#au1)"/>
+<path d="M-50 180 C400 90 800 260 1200 140 S1500 120 1650 160 L1650 220 C1300 200 900 300 500 220 S100 210 -50 250z" fill="url(#au2)"/></g>
+<path d="M0 600 L140 470 L230 530 L380 380 L470 450 L560 400 L700 520 L820 430 L930 500 L1060 360 L1180 460 L1300 410 L1440 500 L1600 420 L1600 900 L0 900z" fill="#162435"/>
+<path d="M380 380 L410 410 L395 408 L372 420 L360 400z M1060 360 L1095 395 L1075 392 L1050 405 L1040 385z" fill="#c9d6e3" opacity=".55"/>
+<path d="M0 660 L120 560 L260 640 L400 540 L540 620 L660 560 L800 640 L960 540 L1100 630 L1240 560 L1380 640 L1600 560 L1600 900 L0 900z" fill="#0e1824"/>
+<rect y="700" width="1600" height="200" fill="url(#water)"/>
+<g stroke="#3aa0ff" stroke-opacity=".12" stroke-width="2"><path d="M200 740h220M700 760h300M1150 735h240M420 800h180M980 820h260"/></g>
+<path d="M0 720 L60 690 L90 650 L120 690 L150 640 L185 700 L215 660 L250 720z M1600 720 L1540 680 L1505 630 L1470 690 L1440 650 L1405 720z" fill="#070b10"/>
+</svg>
