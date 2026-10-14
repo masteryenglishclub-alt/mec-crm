@@ -4,7 +4,7 @@
   const me = await M.requireRole("teacher");
   let tab = "clases";
   if (location.hash === "#solicitudes") tab = "solicitudes";
-  M.header(me, [["clases", "Mis clases"], ["solicitudes", "Solicitudes"], ["estudiantes", "Mis estudiantes"], ["progreso", "Progreso mensual"], ["perfil", "Mi Meet"]], (t) => { tab = t; render(); });
+  M.header(me, [["clases", "Mis clases"], ["solicitudes", "Solicitudes"], ["estudiantes", "Mis estudiantes"], ["progreso", "Progreso mensual"], ["perfil", "Mi Meet"], ["kids", "Material Kids"]], (t) => { tab = t; render(); });
   const render = M.wrapErr(async () => { app.innerHTML = '<p class="muted">Cargando…</p>'; await views[tab](); });
   // Regla de decisión oficial (Rúbrica Conversacional v2.1, sección 4) solo para la vista previa; la base de datos decide.
   const decide = (s, kind) => {
@@ -27,6 +27,7 @@
       ${c.late_penalty && c.late_penalty !== "none" ? `<br><span class="small muted">${M.PENALTY_LABEL[c.late_penalty]}</span>` : ""}</div></div>`;
 
   const views = {
+    async kids() { await M.kidsMaterialView(app); },
     async clases() {
       const now = new Date(), cls = await api.listClasses({ from: new Date(now.getTime() - 21 * 864e5).toISOString() });
       const today = M.bog(now), isToday = (c) => { const p = M.bog(c.starts_at); return p.y === today.y && p.m === today.m && p.d === today.d; };

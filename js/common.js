@@ -7,7 +7,7 @@
     adultos: ["A1", "A2", "B1", "B2", "C1"],
     kids: ["A1 Explorers", "A2 Adventurers", "B1 Discoverers", "B2 Inventors", "YL Young Leaders"]
   };
-  // Tipos con nombre para la interfaz (sin "examen": el Conversation Lab es una conversación guiada)
+  // Tipos con nombre para la interfaz (el Conversation Lab es una conversación guiada)
   M.TYPE_LABEL = {
     content: "Clase", practice_studio: "Practice Studio", conversation_lab: "Conversation Lab",
     review: "Repaso", extra_reinforcement: "Sesión de refuerzo"
@@ -82,6 +82,34 @@
   M.fmtTime = (d) => fmt({ hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(d));
   M.DOW = ["", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 
+  // Material Kids: tipos permitidos y límite (igual que la migración 000700)
+  M.KIDS_TYPES = { pdf: "application/pdf", png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp",
+    docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation" };
+  M.KIDS_MAX = 20 * 1024 * 1024;
+  M.checkKidsFile = (f) => { const ext = (f.name.split(".").pop() || "").toLowerCase();
+    if (!M.KIDS_TYPES[ext] || M.KIDS_TYPES[ext] !== f.type) throw new Error("Tipo de archivo no permitido. Usa PDF, PNG, JPG, WEBP, DOCX o PPTX.");
+    if (f.size > M.KIDS_MAX) throw new Error("El archivo supera 20 MB."); if (!f.size) throw new Error("Archivo vacío."); };
+  M.kidsPath = (f) => { const ext = f.name.split(".").pop().toLowerCase(), base = f.name.slice(0, -(ext.length + 1)).normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || "archivo"; return `${Date.now()}-${base}.${ext}`; };
+  M.kidsMaterialView = async (app) => {
+    const render = async () => {
+      const list = await M.api.listKidsMaterials();
+      app.innerHTML = `<div class="panel"><h2>Material didáctico Kids</h2><p class="muted small">Se publica en la página Mastery4Kids (lectura pública). Tipos: PDF, PNG, JPG, WEBP, DOCX, PPTX · máximo 20 MB.</p>
+        <form id="kup" class="row" style="flex-wrap:wrap;gap:10px;align-items:flex-end">
+          <label style="flex:1 1 200px">Título<input id="kt" required maxlength="200"></label>
+          <label style="flex:2 1 260px">Descripción (opcional)<input id="kd" maxlength="1000"></label>
+          <label style="flex:1 1 220px">Archivo<input id="kf" type="file" required accept=".pdf,.png,.jpg,.jpeg,.webp,.docx,.pptx"></label>
+          <button class="btn">Subir</button></form></div>
+        <div class="panel"><h3>Publicado (${list.length})</h3>${list.length ? `<table><thead><tr><th>Título</th><th>Archivo</th><th>Tamaño</th><th>Fecha</th><th></th></tr></thead><tbody>${list.map((m) =>
+          `<tr><td>${M.esc(m.title)}${m.description ? `<div class="muted small">${M.esc(m.description)}</div>` : ""}</td><td class="small">${M.esc(m.file_path.split(".").pop().toUpperCase())}</td>
+          <td class="small">${(m.size_bytes / 1048576).toFixed(1)} MB</td><td class="small">${M.esc(m.created_at.slice(0, 10))}</td>
+          <td><button class="btn ghost sm" data-del="${M.esc(m.id)}">Eliminar</button></td></tr>`).join("")}</tbody></table>` : '<p class="muted">Aún no hay material publicado.</p>'}</div>`;
+      M.$("#kup").onsubmit = M.wrapErr(async (e) => { e.preventDefault(); const f = M.$("#kf").files[0]; if (!f) throw new Error("Elige un archivo.");
+        await M.api.uploadKidsMaterial(f, M.$("#kt").value.trim(), M.$("#kd").value.trim()); M.toast("Material publicado"); render(); });
+      M.$$("[data-del]").forEach((b) => (b.onclick = M.wrapErr(async () => { if (!confirm("¿Eliminar este material?")) return; await M.api.deleteKidsMaterial(b.dataset.del); M.toast("Material eliminado"); render(); })));
+    };
+    await render();
+  };
   // --- UI ---
   M.esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   M.$ = (s, r) => (r || document).querySelector(s);

@@ -117,6 +117,13 @@
     return {
       mode: "demo",
       async sessionFromUrl() { return null; }, async updatePassword() {}, async resetPassword() { throw new Error("En modo demo no se envían correos."); },
+      /* ---- Material Kids (demo: solo metadatos en localStorage) ---- */
+      async listKidsMaterials() { return (db.kids_materials || []).slice().sort((a, b) => b.created_at.localeCompare(a.created_at)); },
+      async uploadKidsMaterial(file, title, description) { need("admin", "teacher"); M.checkKidsFile(file);
+        db.kids_materials = db.kids_materials || [];
+        const r = { id: "km-" + Date.now(), title, description, file_path: M.kidsPath(file), mime_type: file.type, size_bytes: file.size, uploaded_by: me().id, created_at: new Date().toISOString(), url: "#" };
+        db.kids_materials.push(r); save(); return r; },
+      async deleteKidsMaterial(id) { need("admin", "teacher"); db.kids_materials = (db.kids_materials || []).filter((x) => x.id !== id); save(); },
       async currentUser() { return me(); },
       async demoLogin(r, uid) { const u = db.profiles.find((p) => (uid ? p.id === uid : p.role === r)); sessionStorage.setItem(SKEY, u.id); return u; },
       async signIn() { throw new Error("Modo demo: usa los botones de acceso demo (no hay Supabase configurado)."); },
@@ -323,6 +330,14 @@
       },
       async updatePassword(password) { const c = await client(); const { error } = await c.auth.updateUser({ password }); if (error) throw new Error(error.message); meCache = null; },
       async resetPassword(email, redirectTo) { const c = await client(); const { error } = await c.auth.resetPasswordForEmail(email, { redirectTo }); if (error) throw new Error(error.message); },
+      async listKidsMaterials() { const c = await client(); const rows = await q(c.from("kids_materials").select("*").order("created_at", { ascending: false }));
+        return rows.map((r) => Object.assign(r, { url: c.storage.from("kids-material").getPublicUrl(r.file_path).data.publicUrl })); },
+      async uploadKidsMaterial(file, title, description) { M.checkKidsFile(file); const c = await client(); const path = M.kidsPath(file);
+        const up = await c.storage.from("kids-material").upload(path, file, { contentType: file.type, upsert: false }); if (up.error) throw new Error(up.error.message);
+        const { data, error } = await c.from("kids_materials").insert({ title, description: description || null, file_path: path, mime_type: file.type, size_bytes: file.size }).select().single();
+        if (error) { await c.storage.from("kids-material").remove([path]); throw new Error(error.message); } return data; },
+      async deleteKidsMaterial(id) { const c = await client(); const r = await q(c.from("kids_materials").select("file_path").eq("id", id).single());
+        await q(c.from("kids_materials").delete().eq("id", id)); await c.storage.from("kids-material").remove([r.file_path]); },
       async demoLogin() { throw new Error("Supabase configurado: el acceso demo está desactivado."); },
       async signOut() { const c = await client(); await c.auth.signOut(); meCache = null; },
       async listClasses(f = {}) {

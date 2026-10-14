@@ -4,10 +4,11 @@
   const me = await M.requireRole("admin");
   let tab = "agenda", week = M.weekStart(new Date()), teacherFilter = "";
   if (location.hash === "#solicitudes") tab = "solicitudes";
-  M.header(me, [["agenda", "Agenda"], ["solicitudes", "Solicitudes"], ["estudiantes", "Estudiantes"], ["asistencia", "Asistencia"], ["paquetes", "Paquetes"], ["teachers", "Teachers"]], (t) => { tab = t; render(); });
+  M.header(me, [["agenda", "Agenda"], ["solicitudes", "Solicitudes"], ["estudiantes", "Estudiantes"], ["asistencia", "Asistencia"], ["paquetes", "Paquetes"], ["teachers", "Teachers"], ["kids", "Material Kids"]], (t) => { tab = t; render(); });
   const render = M.wrapErr(async () => { app.innerHTML = '<p class="muted">Cargando…</p>'; await views[tab](); });
 
   const views = {
+    async kids() { await M.kidsMaterialView(app); },
     async agenda() {
       const to = new Date(week.getTime() + 7 * 864e5);
       const [cls, teachers, students] = await Promise.all([api.listClasses({ from: week.toISOString(), to: to.toISOString() }), api.listTeachers(), api.listStudents()]);
