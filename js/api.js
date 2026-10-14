@@ -116,6 +116,7 @@
     }
     return {
       mode: "demo",
+      async sessionFromUrl() { return null; }, async updatePassword() {}, async resetPassword() { throw new Error("En modo demo no se envían correos."); },
       async currentUser() { return me(); },
       async demoLogin(r, uid) { const u = db.profiles.find((p) => (uid ? p.id === uid : p.role === r)); sessionStorage.setItem(SKEY, u.id); return u; },
       async signIn() { throw new Error("Modo demo: usa los botones de acceso demo (no hay Supabase configurado)."); },
@@ -299,7 +300,7 @@
       if (sb) return sb;
       if (!window.supabase) await new Promise((ok, ko) => { const s = document.createElement("script");
         s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"; s.onload = ok; s.onerror = () => ko(new Error("No se pudo cargar supabase-js")); document.head.appendChild(s); });
-      sb = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
+      sb = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY, { auth: { detectSessionInUrl: true, persistSession: true, autoRefreshToken: true, flowType: "implicit" } });
       return sb;
     };
     const q = async (p) => { const { data, error } = await p; if (error) throw new Error(error.message); return data; };
@@ -312,6 +313,16 @@
         return meCache;
       },
       async signIn(email, password) { const c = await client(); const { error } = await c.auth.signInWithPassword({ email, password }); if (error) throw new Error(error.message); meCache = null; return this.currentUser(); },
+      /* Enlaces de Supabase (invitación, recuperación, magic link): #access_token=… (implícito) o ?code=… (PKCE).
+         supabase-js lee el hash al iniciar (detectSessionInUrl); aquí se espera a que termine y se canjea ?code si llega. */
+      async sessionFromUrl(params) {
+        const c = await client();
+        if (params.get("code")) { const { error } = await c.auth.exchangeCodeForSession(params.get("code")); if (error) throw new Error(error.message); }
+        const { data, error } = await c.auth.getSession(); if (error) throw new Error(error.message);
+        meCache = null; return data.session;
+      },
+      async updatePassword(password) { const c = await client(); const { error } = await c.auth.updateUser({ password }); if (error) throw new Error(error.message); meCache = null; },
+      async resetPassword(email, redirectTo) { const c = await client(); const { error } = await c.auth.resetPasswordForEmail(email, { redirectTo }); if (error) throw new Error(error.message); },
       async demoLogin() { throw new Error("Supabase configurado: el acceso demo está desactivado."); },
       async signOut() { const c = await client(); await c.auth.signOut(); meCache = null; },
       async listClasses(f = {}) {
