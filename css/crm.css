@@ -104,3 +104,4 @@ td{border-bottom:1px solid var(--line);padding:8px;vertical-align:top}
 .crit .desc{font-size:.8rem;color:#cfd8e6}.crit .lg{font-size:.76rem;color:var(--muted);margin-top:4px}
 .decision{font:800 1.3rem var(--display)}.decision.sube{color:var(--ok)}.decision.refuerzo{color:var(--warn)}.decision.repite{color:var(--red)}
 .modal .panel.wide{width:min(980px,100%)}
+.alert{border-radius:10px;padding:10px 12px;margin:12px 0;text-align:left;font-size:.9rem;line-height:1.4}.alert.err{background:rgba(180,40,40,.14);border:1px solid rgba(220,80,80,.55)}
