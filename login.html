@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ingresar · Mastery English Club</title><meta name="robots" content="noindex,nofollow">
+<link rel="icon" href="img/favicon.ico"><link rel="apple-touch-icon" href="img/apple-touch-icon-180.png">
+<link rel="stylesheet" href="css/crm.css"></head>
+<body>
+<div class="login"><div class="panel rune">
+  <img src="img/mec-logo-escudo-320.webp" alt="Mastery English Club" width="110" height="110">
+  <h1 style="margin-top:10px">MEC · CRM</h1>
+  <p class="muted small" style="letter-spacing:.18em;text-transform:uppercase">Portal interno · <a href="index.html">Volver al sitio</a></p>
+  <div id="linkerr" class="alert err" hidden role="alert"></div>
+  <form id="setpw" hidden>
+    <h2 style="margin:8px 0 4px">Crea tu contraseña</h2>
+    <p class="muted small" id="setpw-who"></p>
+    <label for="pw1">Nueva contraseña (mínimo 8 caracteres)</label><input id="pw1" type="password" autocomplete="new-password" minlength="8" required>
+    <label for="pw2">Confirmar contraseña</label><input id="pw2" type="password" autocomplete="new-password" minlength="8" required>
+    <p style="margin-top:16px"><button class="btn" style="width:100%;justify-content:center">Guardar y entrar</button></p>
+  </form>
+  <form id="forgot" hidden>
+    <h2 style="margin:8px 0 4px">Olvidé mi contraseña</h2>
+    <p class="muted small">Te enviaremos un enlace para crear una nueva contraseña.</p>
+    <label for="femail">Correo</label><input id="femail" type="email" autocomplete="username" required>
+    <p style="margin-top:16px"><button class="btn" style="width:100%;justify-content:center">Enviar enlace</button></p>
+    <p class="small"><a href="#" id="back">Volver a ingresar</a></p>
+  </form>
+  <form id="f">
+    <label for="email">Correo</label><input id="email" type="email" autocomplete="username" required>
+    <label for="pw">Contraseña</label><input id="pw" type="password" autocomplete="current-password" required>
+    <p style="margin-top:16px"><button class="btn" style="width:100%;justify-content:center">Ingresar</button></p>
+    <p class="small" style="margin-top:8px"><a href="#" id="forgot-link">Olvidé mi contraseña</a></p>
+  </form>
+  <div id="demo" hidden>
+    <div class="divider">MODO DEMO</div>
+    <p class="muted small">No hay Supabase configurado. Entra con datos falsos de prueba:</p>
+    <div class="row"><button class="btn ghost" data-r="admin">Admin</button><button class="btn ghost" data-r="teacher">Teacher</button><button class="btn ghost" data-r="student">Estudiante</button></div>
+    <p style="margin-top:8px"><button class="btn ghost sm" data-r="student" data-u="s-mateo">Estudiante con pago pendiente</button></p>
+    <p class="small" style="margin-top:12px"><a href="#" id="reset">Restablecer datos demo</a></p>
+  </div>
+</div></div>
+<script src="js/config.js"></script><script src="js/common.js"></script><script src="js/api.js"></script>
+<script>
+(async () => {
+  const M = MEC, go = (u) => (location.href = { admin: "admin.html", teacher: "teacher.html", student: "student.html" }[u.role]);
+  const show = (id) => ["f", "setpw", "forgot"].forEach((x) => (M.$("#" + x).hidden = x !== id));
+  // Parámetros de enlaces de Supabase: en el hash (#access_token=…&type=invite / #error=…) o en la query (?code=… / ?error=…)
+  const P = new URLSearchParams(location.search);
+  new URLSearchParams(location.hash.replace(/^#/, "")).forEach((v, k) => P.set(k, v));
+  const linkType = P.get("type"), errCode = P.get("error_code") || P.get("error");
+  const MSG = { otp_expired: "El enlace venció o ya se usó. Pide a la administración un nuevo enlace.",
+                access_denied: "El enlace no es válido o ya se usó. Pide a la administración un nuevo enlace." };
+  const linkErr = (code, desc) => { const b = M.$("#linkerr"); b.hidden = false;
+    b.innerHTML = `<strong>${M.esc(MSG[code] || "No se pudo abrir el enlace. Pide a la administración un nuevo enlace.")}</strong><br><span class="small">Código: ${M.esc(code)}${desc ? " · " + M.esc(desc) : ""}</span>`; };
+  const cleanUrl = () => history.replaceState(null, "", location.pathname);
+  M.$("#forgot-link").onclick = (e) => { e.preventDefault(); M.$("#femail").value = M.$("#email").value; show("forgot"); };
+  M.$("#back").onclick = (e) => { e.preventDefault(); show("f"); };
+  M.$("#forgot").onsubmit = M.wrapErr(async (e) => { e.preventDefault();
+    await M.api.resetPassword(M.$("#femail").value.trim(), location.origin + location.pathname);
+    M.toast("Si el correo está registrado, te llegará un enlace."); show("f"); });
+  M.$("#f").onsubmit = M.wrapErr(async (e) => { e.preventDefault(); go(await M.api.signIn(M.$("#email").value, M.$("#pw").value)); });
+
+  if (errCode) { linkErr(P.get("error_code") || errCode, P.get("error_description")); cleanUrl(); }
+  else if (M.api.mode === "supabase" && (P.get("access_token") || P.get("code") || linkType)) {
+    let session = null;
+    try { session = await M.api.sessionFromUrl(P); } catch (e) { linkErr("sesion", e.message); }
+    cleanUrl();
+    if (session && (linkType === "invite" || linkType === "recovery")) {
+      M.$("#setpw-who").textContent = session.user && session.user.email ? "Cuenta: " + session.user.email : "";
+      show("setpw");
+      M.$("#setpw").onsubmit = M.wrapErr(async (e) => { e.preventDefault();
+        const a = M.$("#pw1").value, b = M.$("#pw2").value;
+        if (a.length < 8) throw new Error("La contraseña debe tener al menos 8 caracteres.");
+        if (a !== b) throw new Error("Las contraseñas no coinciden.");
+        await M.api.updatePassword(a); M.toast("Contraseña guardada");
+        const u = await M.api.currentUser(); if (u) go(u); else show("f"); });
+      return;
+    }
+    if (!session && !errCode) linkErr("sesion", "No se pudo iniciar sesión con el enlace.");
+  }
+  const u = await M.api.currentUser().catch(() => null); if (u) return go(u);
+  if (M.api.mode === "demo") {
+    M.$("#demo").hidden = false;
+    M.$$("#demo [data-r]").forEach((b) => (b.onclick = async () => go(await M.api.demoLogin(b.dataset.r, b.dataset.u))));
+    M.$("#reset").onclick = (e) => { e.preventDefault(); M.api.resetDemo(); M.toast("Datos demo restablecidos"); };
+  }
+})();
+</script>
+</body></html>
