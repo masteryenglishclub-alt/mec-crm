@@ -5,7 +5,7 @@
   const wa = () => "https://wa.me/" + D.whatsapp + "?text=" + encodeURIComponent(D.whatsappText);
   // Nav
   const page = (location.pathname.split("/").pop() || "index.html");
-  const links = [["index.html", "Inicio"], ["metodologia.html", "Metodología y material"], ["staff.html", "Staff"], ["contacto.html", "Contáctanos"]];
+  const links = [["index.html", "Inicio"], ["metodologia.html", "Metodología y material"], ["kids.html", "Mastery4Kids"], ["precios.html", "Precios"], ["eventos.html", "Eventos"], ["staff.html", "Staff"], ["contacto.html", "Contáctanos"]];
   const nav = $("#site-nav");
   if (nav) {
     nav.innerHTML = `<div class="wrap navbar"><a class="nav-brand" href="index.html"><img src="img/mec-logo-escudo-96.webp" alt="" width="40" height="40"><span>Mastery English Club</span></a>
