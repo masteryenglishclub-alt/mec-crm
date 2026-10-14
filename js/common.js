@@ -109,13 +109,13 @@
     const el = document.createElement("header");
     el.className = "top";
     el.innerHTML = `<div class="wrap">
-      <a class="brand" href="index.html"><img src="img/mec-logo-escudo-96.webp" alt="MEC" width="40" height="40">
+      <a class="brand" href="login.html"><img src="img/mec-logo-escudo-96.webp" alt="MEC" width="40" height="40">
         <span>MASTERY ENGLISH CLUB<small>CRM INTERNO</small></span></a>
       <nav class="tabs">${tabs.map((t, i) => `<button data-tab="${t[0]}" class="${i ? "" : "on"}">${t[1]}</button>`).join("")}</nav>
       <div class="who">${M.api.mode === "demo" ? '<span class="demo-badge">MODO DEMO</span>' : ""}
         <span>${M.esc(user.full_name)}</span><button class="btn ghost sm" id="logout">Salir</button></div></div>`;
     document.body.prepend(el);
-    el.querySelector("#logout").onclick = async () => { await M.api.signOut(); location.href = "index.html"; };
+    el.querySelector("#logout").onclick = async () => { await M.api.signOut(); location.href = "login.html"; };
     M.$$("nav.tabs button", el).forEach((b) => (b.onclick = () => {
       M.$$("nav.tabs button", el).forEach((x) => x.classList.toggle("on", x === b)); onTab(b.dataset.tab);
     }));
@@ -123,7 +123,7 @@
   /** Exige sesión con el rol indicado; si no, vuelve al login */
   M.requireRole = async function (role) {
     const u = await M.api.currentUser();
-    if (!u || u.role !== role) { location.href = "index.html"; throw new Error("sin sesión"); }
+    if (!u || u.role !== role) { location.href = "login.html"; throw new Error("sin sesión"); }
     return u;
   };
 })();
