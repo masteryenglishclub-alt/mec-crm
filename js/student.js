@@ -42,6 +42,7 @@
           <div class="panel kpi"><b>${done}<small style="font-size:1rem" class="muted">/160</small></b><span>Clases del programa</span></div>
           <div class="panel kpi red"><b>${M.esc(s.level_name)}${s.current_sublevel ? "." + s.current_sublevel : ""}</b><span>Tu nivel actual</span></div></div>
         <div class="panel"><div class="bar"><i style="width:${(done / 160) * 100}%"></i></div><p class="small muted" style="margin-top:6px">Próxima: clase #${r.next_class_number} · ${M.esc(M.classInfo(r.next_class_number, s.program).title)}</p></div>
+        <div class="sp-grid" style="margin-bottom:18px">${M.perfil.mcerCard(done)}</div>
         <div class="grid g2"><div class="panel"><h3>Próximas clases</h3>${up.map(clsRow).join("") || '<p class="muted">No tienes clases agendadas.</p>'}
           <p><a class="btn sm" href="#solicitar" id="goreq">${b.payment_blocked ? "Ver estado de mi paquete" : "Solicitar una clase"}</a></p></div>
         <div class="panel"><h3>Tu mes</h3>${pr ? `<div class="grid g3"><div class="kpi"><b>${pr.speaking_minutes}</b><span>min hablando</span></div><div class="kpi"><b>${pr.speaking_pct ?? "—"}%</b><span>del tiempo</span></div><div class="kpi"><b>${pr.fluency ?? "—"}/5</b><span>fluidez</span></div></div>

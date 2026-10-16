@@ -22,10 +22,10 @@
         <text x="${x + bw / 2}" y="165" text-anchor="middle" fill="#f0c46a" font-weight="700" font-size="15">${k}</text><text x="${x + bw / 2}" y="${Math.min(134, 136 - bh) - 4}" text-anchor="middle" fill="#e8edf3" font-size="12">${m[k] ? m[k] + "%" : ""}</text>`; }).join("");
     return `<svg viewBox="0 0 520 190" class="sp-chart" role="img" aria-label="Progreso en el Marco Común Europeo: ${ks.map((k) => k + " " + m[k] + "%").join(", ")}">${bars}</svg>`;
   }
-  function estiloSvg(e) {
+  function estiloSvg(e, label = "Estilo de aprendizaje") {
     const ks = Object.keys(e), cols = ["#2f7fe0", "#c0862a", "#3ccf8e"], C = 2 * Math.PI * 50; let off = 0;
     const arcs = ks.map((k, i) => { const l = (e[k] / 100) * C, s = `<circle cx="70" cy="70" r="50" fill="none" stroke="${cols[i]}" stroke-width="22" stroke-dasharray="${l} ${C - l}" stroke-dashoffset="${-off}" transform="rotate(-90 70 70)"/>`; off += l; return s; }).join("");
-    return `<div class="sp-estilo"><svg viewBox="0 0 140 140" class="sp-donut" role="img" aria-label="Estilo de aprendizaje: ${ks.map((k) => k + " " + e[k] + "%").join(", ")}">${arcs}</svg><ul class="sp-ley">${ks.map((k, i) => `<li><i style="background:${cols[i]}"></i>${k} · ${e[k]}%</li>`).join("")}</ul></div>`;
+    return `<div class="sp-estilo"><svg viewBox="0 0 140 140" class="sp-donut" role="img" aria-label="${label}: ${ks.map((k) => k + " " + e[k] + "%").join(", ")}">${arcs}</svg><ul class="sp-ley">${ks.map((k, i) => `<li><i style="background:${cols[i]}"></i>${k} · ${e[k]}%</li>`).join("")}</ul></div>`;
   }
   // Upgrade: siguiente paquete del MISMO tipo (P1→P2→P3→P4, G1→G2→G3, C1→C2→C3). En P4/G3/C3: sin botón.
   // Paquetes antiguos (P1-USD…P6-USD) o sueltas: primer personalizado v3 con MÁS clases que el actual.
@@ -91,7 +91,7 @@
         <div><h2>${n}</h2><p class="sp-rol">${esc(t.role_title || "Teacher")}</p>${mine ? '<span class="sp-tag ok">Tu teacher</span>' : ""}</div></header>
         <h3>BIO</h3>${t.bio ? `<p class="sp-bio-t">${esc(t.bio)}</p>` : '<p class="sp-pend">Por completar</p>'}
         <div class="sp-tcols"><div><h3>Experiencia</h3>${lista(t.experience)}</div><div><h3>Fortalezas</h3>${lista(t.strengths)}</div>
-        <div><h3>Estilo de enseñanza preferido</h3>${t.teaching_style ? `<p>${ESTILO[t.teaching_style]}</p>` : '<p class="sp-pend">Por completar</p>'}</div>
+        <div class="sp-ancho"><h3>Estilo de enseñanza</h3>${t.teaching_style ? estiloSvg({ Visual: t.teaching_style === "visual" ? 100 : 0, Auditivo: t.teaching_style === "auditivo" ? 100 : 0, "Kinestésico": t.teaching_style === "kinestesico" ? 100 : 0 }, "Estilo de enseñanza preferido") + `<p class="sp-small">Preferido: ${ESTILO[t.teaching_style]}</p>` : '<p class="sp-pend">Por completar</p>'}</div>
         <div><h3>Hobbies y gustos</h3>${lista(t.hobbies)}</div><div><h3>Temas de interés</h3>${lista(t.topics)}</div></div>
         ${opts.agendar ? (mine ? `<p><a class="sp-btn tcolor" href="${opts.agendar}">Agendar con ${n}</a></p>` : `<p class="sp-small">Para tomar clases con ${n}, pide al admin un cambio de teacher.</p>`) : ""}</article>`; }).join("")}</div>`;
   }
@@ -199,5 +199,5 @@
   function editTeacher(tid, name, opts) {
     M.modal(`<h2>Perfil público · ${esc(name)}</h2><div id="tp-m"></div>`, () => teacherForm(M.$("#tp-m"), tid, name, Object.assign({ modal: true }, opts)));
   }
-  M.perfil = { misClases, teachersView, studentsBrowser, bindTest, editStudent, teacherForm, editTeacher };
+  M.perfil = { mcerCard: (done) => card("Mi progreso · Marco Común Europeo", mcerSvg(mcer(done)) + `<p class="sp-small">${done} de 160 clases del programa.</p>`), misClases, teachersView, studentsBrowser, bindTest, editStudent, teacherForm, editTeacher };
 })();

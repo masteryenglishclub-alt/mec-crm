@@ -11,7 +11,8 @@
     async kids() { await M.kidsMaterialView(app); },
     async agenda() {
       const to = new Date(week.getTime() + 7 * 864e5);
-      const [cls, teachers, students] = await Promise.all([api.listClasses({ from: week.toISOString(), to: to.toISOString() }), api.listTeachers(), api.listStudents()]);
+      const [cls, teachers, students, tps] = await Promise.all([api.listClasses({ from: week.toISOString(), to: to.toISOString() }), api.listTeachers(), api.listStudents(), api.listTeacherProfiles().catch(() => [])]);
+      const colors = M.teacherColors(teachers, tps);
       const shown = cls.filter((c) => !teacherFilter || c.teacher_id === teacherFilter);
       const days = [1, 2, 3, 4, 5, 6].map((i) => new Date(week.getTime() + (i - 1) * 864e5));
       let g = '<div class="hd">Hora</div>' + days.map((d) => `<div class="hd">${M.DOW[M.bog(d).dow]} ${M.bog(d).d}/${M.bog(d).m}</div>`).join("");
@@ -22,19 +23,21 @@
           const evs = shown.filter((c) => new Date(c.starts_at).getTime() === slot.getTime());
           const valid = M.isValidSlot(slot);
           g += `<div class="${valid ? "free" : "off"}" data-slot="${valid ? slot.toISOString() : ""}">` + evs.map((c) =>
-            `<div class="ev ${c.status} ${c.class_type === "conversation_lab" ? "lab" : ""} ${c.class_type === "extra_reinforcement" ? "extra" : ""}" data-id="${c.id}">
+            `<div class="ev tc ${c.status} ${c.class_type === "conversation_lab" ? "lab" : ""} ${c.class_type === "extra_reinforcement" ? "extra" : ""}" data-id="${c.id}" style="--c:${colors[c.teacher_id] || "#5d6b80"}">
               <b>${M.esc(c.student_name)}</b><br>${c.class_number ? "#" + c.class_number + " · " : ""}${M.esc(M.TYPE_LABEL[c.class_type])}<br><span class="muted">${M.esc((c.teacher_name || "").replace("Teacher Demo ", "T. "))}</span></div>`).join("") + "</div>";
         });
       }
       const wEnd = new Date(week.getTime() + 5 * 864e5);
-      app.innerHTML = `<h1>Agenda semanal</h1>
+      app.innerHTML = `<header class="ag-hero"><img src="img/web/hero-agenda-1280.jpg" alt="" width="1536" height="911" decoding="async"><div><span class="sp-kicker">Tu camino en inglés</span><h1>Agenda semanal</h1><p>Cada clase te acerca a tus metas.</p></div></header>
         <div class="panel"><div class="row">
           <div style="flex:0 0 auto"><button class="btn ghost sm" id="prev">◀ Semana anterior</button> <button class="btn ghost sm" id="today">Hoy</button> <button class="btn ghost sm" id="next">Semana siguiente ▶</button></div>
           <div><b>${M.fmtDate(week)} – ${M.fmtDate(wEnd)}</b> <span class="muted small">· hora Bogotá (UTC-5) · bloques de 60 min (55 + 5)</span></div>
           <div style="flex:0 0 240px"><select id="tf"><option value="">Todos los teachers</option>${teachers.map((t) => `<option value="${t.id}" ${t.id === teacherFilter ? "selected" : ""}>${M.esc(t.full_name)}</option>`).join("")}</select></div>
         </div></div>
-        <div class="table-wrap"><div class="sched">${g}</div></div>
-        <p class="muted small">Clic en un bloque libre para agendar · clic en una clase para ver detalles. Franjas rayadas = fuera del horario (L-V 6:00-18:00, sáb 10:00-16:00).</p>`;
+        <div class="ag-wrap2"><div><div class="table-wrap"><div class="sched">${g}</div></div>
+        <p class="muted small">Clic en un bloque libre para agendar · clic en una clase para ver detalles. Franjas rayadas = fuera del horario (L-V 6:00-18:00, sáb 10:00-16:00).</p></div>
+        <aside class="ag-side" aria-labelledby="ley-t"><h2 id="ley-t">Teachers</h2><ul class="ag-ley">${teachers.map((t) => `<li><i style="background:${colors[t.id]}"></i><strong>${M.esc(t.full_name)}</strong></li>`).join("") || '<li class="muted">Sin teachers</li>'}</ul>
+          <h2>Estado</h2><ul class="ag-ley"><li>Texto tachado = clase cancelada</li><li>Clic en un bloque libre = agendar</li></ul></aside></div>`;
       M.$("#prev").onclick = () => { week = new Date(week.getTime() - 7 * 864e5); render(); };
       M.$("#next").onclick = () => { week = new Date(week.getTime() + 7 * 864e5); render(); };
       M.$("#today").onclick = () => { week = M.weekStart(new Date()); render(); };
@@ -43,14 +46,15 @@
       M.$$(".ev").forEach((el) => (el.onclick = () => classDetail(cls.find((c) => c.id === el.dataset.id))));
     },
     async solicitudes() {
-      const [reqs, teachers] = await Promise.all([api.listRequests(), api.listTeachers()]);
+      const [reqs, teachers, tps] = await Promise.all([api.listRequests(), api.listTeachers(), api.listTeacherProfiles().catch(() => [])]);
+      const colors = M.teacherColors(teachers, tps);
       const shown = reqs.filter((r) => (!teacherFilter || r.teacher_id === teacherFilter) && (!reqStatus || r.status === reqStatus));
       const cnt = (st) => reqs.filter((r) => (!teacherFilter || r.teacher_id === teacherFilter) && (!st || r.status === st)).length;
       app.innerHTML = `<h1>Solicitud de clases</h1><p class="muted">Solo el admin aprueba o rechaza. Los teachers ven el estado en modo lectura.</p>
-        <div class="row" role="group" aria-label="Filtrar por estado" style="margin-bottom:10px;gap:6px;flex-wrap:wrap">${[["", "Todas"], ["pending", "Pendientes"], ["approved", "Aprobadas"], ["rejected", "Rechazadas"], ["cancelled", "Retiradas"]].map(([k, n]) => `<button type="button" class="btn sm ${k === reqStatus ? "" : "ghost"}" data-rs="${k}" style="flex:0 0 auto" aria-pressed="${k === reqStatus}">${n} (${cnt(k)})</button>`).join("")}</div>
+        <div class="row" role="group" aria-label="Filtrar por estado" style="margin-bottom:10px;gap:6px;flex-wrap:wrap">${[["", "Todas"], ["pending", "Pendientes"], ["approved", "Aprobadas"], ["rejected", "Rechazadas"], ["cancelled", "Retiradas"]].map(([k, n]) => `<button type="button" class="sp-btn sol-f" data-rs="${k}" aria-pressed="${k === reqStatus}">${n} (${cnt(k)})</button>`).join("")}</div>
         <div class="panel"><div class="row"><div class="muted">Un calendario por teacher. Las solicitudes pendientes no bloquean el bloque; al aprobar se vuelve a verificar todo.</div>
         <div style="flex:0 0 240px"><select id="tf"><option value="">Todos los teachers</option>${teachers.map((t) => `<option value="${t.id}" ${t.id === teacherFilter ? "selected" : ""}>${M.esc(t.full_name)} (${reqs.filter((r) => r.teacher_id === t.id && r.status === "pending").length})</option>`).join("")}</select></div></div></div>
-        ${M.requestsView(shown, { showTeacher: true })}`;
+        <div class="legend">${teachers.map((t) => `<span><i style="background:${colors[t.id]}"></i>${M.esc(t.full_name)}</span>`).join("")}</div>${M.requestsTable(shown, colors)}`;
       M.$("#tf").onchange = (e) => { teacherFilter = e.target.value; render(); };
       M.$$("[data-rs]").forEach((b) => (b.onclick = () => { reqStatus = b.dataset.rs; render(); }));
       M.bindRequests(api, render);

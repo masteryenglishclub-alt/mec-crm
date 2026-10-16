@@ -31,6 +31,29 @@
       <p class="small muted">Al aprobar, la base de datos vuelve a verificar horario (L-V 6-18, sáb 10-16, Bogotá), disponibilidad, doble reserva y pago del paquete.</p></div>
       <div class="panel"><h3>Decididas recientemente</h3>${done.map(row).join("") || '<p class="muted">—</p>'}</div>`;
   };
+  /** Color por teacher: el del perfil público si existe; si no, paleta fija por orden */
+  M.PALETTE = ["#2f7fe0", "#c0862a", "#3ccf8e", "#a989e6", "#e4606a", "#2bb5c4"];
+  M.teacherColors = function (teachers, profiles) {
+    const o = {}; (teachers || []).forEach((t, i) => { const p = (profiles || []).find((x) => x.teacher_id === t.id);
+      o[t.id] = p && /^#[0-9a-fA-F]{6}$/.test(p.color) ? p.color : M.PALETTE[i % M.PALETTE.length]; }); return o;
+  };
+  /** Tabla nórdica de solicitudes con color por teacher (admin). Conserva data-ap / data-rj para M.bindRequests */
+  M.requestsTable = function (reqs, colors) {
+    const EST = { pending: "pendiente", approved: "aprobada", rejected: "rechazada", cancelled: "retirada" };
+    return `<table class="sol-tabla"><thead><tr><th>Estudiante</th><th>Teacher</th><th>Fecha y hora (Bogotá)</th><th>Clase</th><th>Estado</th><th><span class="sr-only">Acciones</span></th></tr></thead><tbody>` +
+      (reqs.map((r) => `<tr style="--c:${colors[r.teacher_id] || "#5d6b80"}">
+        <td data-l="Estudiante"><strong>${M.esc(r.student_name)}</strong>${r.student_note ? `<span class="sol-warn muted">“${M.esc(r.student_note)}”</span>` : ""}</td>
+        <td data-l="Teacher"><span class="sol-prof"><i></i>${M.esc(r.teacher_name || "—")}</span></td>
+        <td data-l="Fecha y hora">${M.fmtDateTime(r.starts_at)}</td>
+        <td data-l="Clase">${r.next_class_number && r.status === "pending" ? `#${r.next_class_number} · ${M.esc(M.classInfo(r.next_class_number).title)}` : "—"}
+          ${r.competing ? `<span class="sol-warn" style="color:var(--warn)">${r.competing} solicitud(es) más para este bloque: al aprobar una, las otras se rechazan.</span>` : ""}
+          ${r.conflict ? `<span class="sol-warn" style="color:#ff9a9e">Bloque ocupado: no se puede aprobar.</span>` : ""}
+          ${r.payment_blocked ? `<span class="sol-warn" style="color:var(--warn)">Pago pendiente: no se puede aprobar.</span>` : ""}
+          ${r.decision_note && r.status !== "pending" ? `<span class="sol-warn muted">Nota: ${M.esc(r.decision_note)}</span>` : ""}</td>
+        <td data-l="Estado"><span class="sol-est ${EST[r.status] || ""}">${M.REQ_LABEL[r.status] || r.status}</span></td>
+        <td class="sol-acc">${r.status === "pending" ? `<button type="button" class="sp-btn sol-ok" data-ap="${r.id}" ${r.conflict || r.payment_blocked ? "disabled" : ""}>Aprobar</button><button type="button" class="sp-btn sol-no" data-rj="${r.id}">Rechazar</button>` : ""}</td></tr>`).join("") ||
+      `<tr><td colspan="6" class="sp-pend">No hay solicitudes con este estado.</td></tr>`) + `</tbody></table>`;
+  };
   M.bindRequests = function (api, rerender) {
     M.$$("[data-ap]").forEach((b) => (b.onclick = M.wrapErr(async () => { await api.approveRequest(b.dataset.ap); M.toast("Solicitud aprobada: clase agendada"); rerender(); })));
     M.$$("[data-rj]").forEach((b) => (b.onclick = () => M.modal(`<h2>Rechazar solicitud</h2><label>Mensaje para el estudiante</label><textarea id="rjn" rows="2">Ese bloque no me queda posible; elige otro horario, por favor.</textarea>
