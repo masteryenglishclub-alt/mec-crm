@@ -26,8 +26,8 @@
         ${r.conflict ? `<br><span class="small" style="color:var(--red)">✖ El bloque ya está ocupado: no se puede aprobar.</span>` : ""}
         ${r.payment_blocked ? `<br><span class="small" style="color:var(--warn)">⚠ Paquete con pago pendiente: no se puede aprobar hasta confirmar el pago.</span>` : ""}
         ${r.decision_note && r.status !== "pending" ? `<br><span class="small muted">Nota: ${M.esc(r.decision_note)}</span>` : ""}</div>
-      <div>${r.status === "pending" ? `<button class="btn ok sm" data-ap="${r.id}" ${r.conflict || r.payment_blocked ? "disabled" : ""}>Aprobar</button> <button class="btn red sm" data-rj="${r.id}">Rechazar</button>` : ""}</div></div>`;
-    return `<div class="panel rune"><h3>Pendientes de aprobación (${pend.length})</h3>${pend.map(row).join("") || '<p class="muted">No hay solicitudes pendientes.</p>'}
+      <div>${r.status === "pending" && !opts.readOnly ? `<button class="btn ok sm" data-ap="${r.id}" ${r.conflict || r.payment_blocked ? "disabled" : ""}>Aprobar</button> <button class="btn red sm" data-rj="${r.id}">Rechazar</button>` : ""}</div></div>`;
+    return `<div class="panel rune"><h3>Pendientes de aprobación (${pend.length})</h3>${opts.readOnly ? '<p class="small muted">Solo lectura: el admin aprueba o rechaza las solicitudes.</p>' : ""}${pend.map(row).join("") || '<p class="muted">No hay solicitudes pendientes.</p>'}
       <p class="small muted">Al aprobar, la base de datos vuelve a verificar horario (L-V 6-18, sáb 10-16, Bogotá), disponibilidad, doble reserva y pago del paquete.</p></div>
       <div class="panel"><h3>Decididas recientemente</h3>${done.map(row).join("") || '<p class="muted">—</p>'}</div>`;
   };

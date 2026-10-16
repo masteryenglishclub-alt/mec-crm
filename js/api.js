@@ -235,7 +235,7 @@
       },
       async approveRequest(id, note) {
         const u = me(), r = db.requests.find((x) => x.id === id);
-        if (!r || !(u.role === "admin" || (u.role === "teacher" && r.teacher_id === u.id))) throw new Error("Solo el teacher del estudiante o un admin puede aprobar solicitudes");
+        if (!r || u.role !== "admin") throw new Error("Solo un admin puede aprobar solicitudes de clase");
         if (r.status !== "pending") throw new Error(`La solicitud ya no está pendiente (estado: ${r.status})`);
         const start = new Date(r.starts_at);
         if (start <= new Date()) throw new Error("La solicitud venció: el horario ya pasó");
@@ -255,7 +255,7 @@
       },
       async rejectRequest(id, note) {
         const u = me(), r = db.requests.find((x) => x.id === id);
-        if (!r || !(u.role === "admin" || (u.role === "teacher" && r.teacher_id === u.id))) throw new Error("Solo el teacher del estudiante o un admin puede rechazar solicitudes");
+        if (!r || u.role !== "admin") throw new Error("Solo un admin puede rechazar solicitudes de clase");
         if (r.status !== "pending") throw new Error(`La solicitud ya no está pendiente (estado: ${r.status})`);
         Object.assign(r, { status: "rejected", decided_by: u.id, decided_at: today(), decision_note: note || null }); save();
       },

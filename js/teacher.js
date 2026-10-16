@@ -45,8 +45,7 @@
     },
     async solicitudes() {
       const reqs = await api.listRequests();
-      app.innerHTML = `<h1>Solicitudes de clase</h1><p class="muted">Tus estudiantes solicitan bloques libres de tu calendario. Tú (o el admin) apruebas o rechazas.</p>${M.requestsView(reqs)}`;
-      M.bindRequests(api, render);
+      app.innerHTML = `<h1>Solicitudes de clase</h1><p class="muted">Tus estudiantes solicitan bloques libres de tu calendario. Solo el admin aprueba o rechaza; aquí ves su estado.</p>${M.requestsView(reqs, { readOnly: true })}`;
     },
     async estudiantes() {
       const st = await api.listStudents();
