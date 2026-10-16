@@ -33,7 +33,7 @@
   if (casos) casos.innerHTML = D.testimonios.map((t) => `<!-- PLACEHOLDER: testimonio de EJEMPLO inventado; reemplazar por uno real -->
     <figure class="card testimonio" data-placeholder="${t.placeholder}">${avatar(t.avatar)}
       <blockquote>“${esc(t.texto)}”</blockquote><figcaption><strong>${esc(t.nombre)}</strong> · ${esc(t.pais)} · Nivel ${esc(t.nivel)}</figcaption>
-      <span class="ejemplo">Ejemplo</span></figure>`).join("");
+      <span class="ejemplo">Testimonio de ejemplo</span></figure>`).join("");
 
   // Globo: proyección ortográfica, puntos de tierra (contornos simplificados propios) + marcadores
   const cv = $("#globo");

@@ -1,20 +1,28 @@
 (function () {
-  const P = window.MEC_PRECIOS, $ = (s) => document.querySelector(s);
-  const cop = (n) => n.toLocaleString("es-CO", { maximumFractionDigits: 0 }).replace(/,/g, ".") + " COP";
-  const dec = (n, c) => n.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false }) + " " + c;
-  const card = (k, titulo, cnt, lista) => `<article class="card plan${k.desc === 40 ? " top" : ""}">
-    <div class="badge">−${k.desc}%<small>DESCUENTO</small></div>
-    <h3>${titulo}</h3><div class="cnt">${cnt}</div>
-    <div class="antes">Antes ${cop(lista)}</div><div class="cop">${cop(k.cop)}</div>
-    <div class="otras">${dec(k.usd, "USD")} · ${dec(k.eur, "EUR")}</div>
-    <div class="xclase">${cop(Math.round(k.cop / (k.clases || k.pers + k.grup)))} por clase</div></article>`;
-  const ps = P.personalizadas.suelta.cop, gs = P.grupales.suelta.cop;
-  $("#p-pers").innerHTML = P.personalizadas.paquetes.map((k) => card(k, "Paquete " + k.id, k.clases + " clases 1 a 1", k.clases * ps)).join("");
-  $("#p-grup").innerHTML = P.grupales.paquetes.map((k) => card(k, "Paquete " + k.id, k.clases + " clases grupales", k.clases * gs)).join("");
-  $("#p-comb").innerHTML = P.combinados.paquetes.map((k) => card(k, "Paquete " + k.id, `${k.pers} personalizadas + ${k.grup} grupales`, k.lista)).join("");
-  const s = (o) => `${cop(o.cop)} · ${dec(o.usd, "USD")}${o.usdCalc ? "*" : ""} · ${dec(o.eur, "EUR")}${o.eurCalc ? "*" : ""}`;
-  $("#s-pers").textContent = "Clase suelta: " + s(P.personalizadas.suelta);
-  $("#s-grup").textContent = "Clase suelta: " + s(P.grupales.suelta);
-  const t = P.tasas;
-  $("#nota").textContent = `Precios por estudiante. Tasas de referencia: 1 USD = ${t.copUsd.toLocaleString("es-CO").replace(/,/g, ".")} COP · 1 USD = ${String(t.usdEur).replace(".", ",")} EUR (${t.fuenteEur}, ${t.fechaEur}). Los valores en USD y EUR son de referencia. * Calculado con estas tasas.`;
+  const P = window.MEC_PRECIOS, $ = (s) => document.querySelector(s), L = P.lista, T = P.tasas;
+  const n = (v) => Math.round(v).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  const cop = (v) => "$" + n(v) + " COP";
+  const fx = (v) => { const u = v / T.copUsd, e = u * T.usdEur; return `≈ ${u.toFixed(2).replace(".", ",")} USD · ${e.toFixed(2).replace(".", ",")} EUR`; };
+  const card = (k, titulo, cnt, clases, lista, top) => `<article class="pcard${top ? " top" : ""}">
+    <div class="pdesc"><b>−${k.desc}%</b><small>Ahorro</small></div>
+    <h3>${titulo}</h3><div class="pcnt">${cnt}</div>
+    <div class="pantes"><s>${cop(lista)}</s></div><div class="pcop">${cop(k.cop)}</div>
+    <div class="pxclase">${cop(k.cop / clases)} por clase</div>
+    <div class="pfx" data-fx>${fx(k.cop)}</div></article>`;
+  const pp = P.personalizadas.paquetes, gp = P.grupales.paquetes, cp = P.combinados.paquetes;
+  $("#p-pers").innerHTML = pp.map((k, i) => card(k, "Paquete " + k.id, k.clases + " clases", k.clases, k.clases * L.pers, i === pp.length - 1)).join("");
+  $("#p-grup").innerHTML = gp.map((k, i) => card(k, "Paquete " + k.id, k.clases + " clases", k.clases, k.clases * L.grup, i === gp.length - 1)).join("");
+  $("#p-comb").innerHTML = cp.map((k, i) => card(k, "Combo " + k.id, `${k.pers + k.grup} clases (${k.pers} personalizadas + ${k.grup} grupales)`, k.pers + k.grup, k.pers * L.pers + k.grup * L.grup, i === cp.length - 1)).join("");
+  const ps = P.personalizadas.suelta;
+  $("#s-pers").innerHTML = `Clase suelta personalizada: <s>${cop(ps.lista)}</s> <strong>${cop(ps.cop)}</strong> <span class="etq">Descuento especial ${ps.desc}%</span>`;
+  $("#s-grup").innerHTML = `Clase suelta grupal: <strong>${cop(P.grupales.suelta.cop)}</strong>`;
+  $("#nota").textContent = `Precios por estudiante, en pesos colombianos (COP), IVA incluido. Precio de lista por clase: personalizada ${cop(L.pers)}, grupal ${cop(L.grup)}. Conversión de referencia: 1 USD = ${n(T.copUsd)} COP · 1 USD = ${String(T.usdEur).replace(".", ",")} EUR.`;
+  // Modal "Aprende más": <dialog> nativo (foco atrapado, Esc cierra); devuelve el foco al botón.
+  const dlg = $("#politicas"), btn = $("#abrir-politicas");
+  if (dlg && btn) {
+    btn.addEventListener("click", () => { if (dlg.showModal) dlg.showModal(); else dlg.setAttribute("open", ""); });
+    dlg.querySelector("[data-cerrar]").addEventListener("click", () => dlg.close ? dlg.close() : dlg.removeAttribute("open"));
+    dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); });
+    dlg.addEventListener("close", () => btn.focus());
+  }
 })();
