@@ -105,3 +105,189 @@ body.kids .prose h3{color:#7fdcff}
 .mat-item{display:flex;flex-direction:column;gap:6px}
 .mat-item .acciones{display:flex;gap:8px;margin-top:auto}
 @media (max-width:860px){.kids-hero{grid-template-columns:1fr}.galeria{grid-template-columns:repeat(2,1fr)}}
+/* ===== Hero de inicio: fiordo al atardecer (imagen de referencia limpia) ===== */
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+body.home #site-nav{background:#07090d;backdrop-filter:none}
+body.home #site-nav::after{display:none}
+body.home .navbar{justify-content:center}body.home .nav-brand{margin-right:24px}
+.hero.hero-fiordo{background:#07090d;min-height:max(600px,calc(100vh - 64px));align-items:center}
+.hero-fiordo::before{background:linear-gradient(90deg,rgba(5,7,10,.35) 0%,rgba(5,7,10,.4) 22%,rgba(5,7,10,.14) 48%,transparent 62%);z-index:1}
+.hero-fiordo::after{z-index:1;height:90px}
+.hero-bg,.hero-bg img{position:absolute;inset:0;width:100%;height:100%}
+.hero-bg img{object-fit:cover;object-position:62% 50%}
+.hero-fiordo .hero-grid{display:block;z-index:2;width:100%;padding:0 20px}
+.hero-fiordo .hero-text{max-width:560px;margin-left:calc(20vw - max(0px,(100vw - 1140px)/2) - 20px)}
+.hero-fiordo .kicker{font-size:.8rem;letter-spacing:.2em;margin-bottom:10px}
+.hero-fiordo h1{font-size:clamp(2.3rem,4.1vw,4rem);line-height:1.08;margin-bottom:22px}
+.hero-fiordo .lead{font-size:clamp(1rem,1.25vw,1.2rem);color:#e2e8f0;max-width:32em;text-shadow:0 1px 8px rgba(0,0,0,.7)}
+.hero-fiordo .cta-row{margin-top:26px}
+.hero-fiordo .btn.ghost{background:rgba(7,9,13,.45);border-color:rgba(230,236,244,.6)}
+@media (max-width:1140px){.hero-fiordo .hero-text{margin-left:max(0px,calc(20vw - 20px))}}
+@media (max-width:700px){
+ .hero.hero-fiordo{min-height:calc(100svh - 64px);align-items:flex-end}
+ .hero-bg img{object-position:58% 30%}
+ .hero-fiordo::before{background:linear-gradient(180deg,transparent 28%,rgba(5,7,10,.55) 52%,rgba(5,7,10,.92) 78%)}
+ .hero-fiordo .hero-text{margin:0;padding-bottom:36px}
+ .hero-fiordo h1{font-size:2.3rem}
+ .hero-fiordo .cta-row .btn{flex:1 1 auto;justify-content:center}}
+/* ===== Mastery4Kids: hero aldea vikinga (imagen de referencia limpia) + pergamino ===== */
+body.kids #site-nav{background:#07090d;backdrop-filter:none}
+body.kids #site-nav::after{display:none}
+.hero.kids-hero2{background:#07090d;min-height:clamp(560px,calc(100vh - 64px),780px);align-items:flex-start}
+.kids-hero2::before{background:linear-gradient(90deg,rgba(5,7,10,.5) 0%,rgba(5,7,10,.45) 30%,rgba(5,7,10,.1) 52%,transparent 62%);z-index:1}
+.kids-hero2::after{display:none}
+.kids-hero2 .hero-bg img{object-position:50% 0}
+.kids-text{position:relative;z-index:2;width:100%;padding-top:clamp(40px,7vw,96px);padding-bottom:200px}
+.kids-text>*{max-width:470px;margin-left:clamp(0px,calc(18vw - max(0px,(100vw - 1140px)/2) - 20px),220px)}
+.kids-hero2 .kicker{color:#ffcc33;font-size:.78rem;letter-spacing:.2em}
+.kids-hero2 h1{font:800 clamp(2.2rem,3.7vw,3.4rem)/1.08 var(--display);letter-spacing:.02em;margin:0 0 18px;text-shadow:0 2px 20px rgba(0,0,0,.7)}
+.kids-hero2 h1 span{display:block}
+.kids-hero2 .lead{font-size:clamp(.95rem,1.05vw,1.05rem);color:#e8edf3;text-shadow:0 1px 8px rgba(0,0,0,.8)}
+.kids-hero2 .cta-row{display:flex;gap:14px;flex-wrap:wrap;margin-top:24px}
+.kids-hero2 .btn.ghost{background:rgba(7,9,13,.5);border-color:rgba(230,236,244,.7);color:#fff}
+.video-nota{margin-top:10px;font-size:.88rem;color:#ffe08a}
+.clase-panel{position:relative;z-index:3;margin-top:-190px;padding-bottom:30px}
+.pergamino{max-width:900px;margin:0 auto;padding:22px 30px 26px;color:#3a2614;border-radius:6px;
+ background:radial-gradient(ellipse at center,#f6e7c4 0%,#ecd6a6 70%,#d9b97f 100%);box-shadow:0 18px 40px rgba(0,0,0,.55),inset 0 0 30px rgba(120,80,30,.35);border:1px solid #b8925a}
+.pergamino h2{font:800 clamp(1.4rem,2.2vw,1.9rem) var(--display);text-align:center;color:#2a2a7a;margin:0 0 16px}
+.clase-iconos{display:grid;grid-template-columns:repeat(5,1fr);list-style:none;margin:0;padding:0}
+.clase-iconos li{text-align:center;padding:0 12px;border-left:1px dashed rgba(90,60,30,.35)}
+.clase-iconos li:first-child{border-left:0}
+.clase-iconos svg{width:46px;height:46px;display:block;margin:0 auto 8px}
+.clase-iconos h3{font:800 .74rem var(--display);letter-spacing:.04em;text-transform:uppercase;margin:0 0 4px;color:#2b1c0e}
+.clase-iconos p{font-size:.8rem;line-height:1.35;margin:0;color:#4a3420}
+@media (max-width:860px){.clase-iconos{grid-template-columns:repeat(2,1fr);gap:18px 0}.clase-iconos li:nth-child(odd){border-left:0}.clase-iconos li:last-child{grid-column:1/-1}}
+@media (max-width:700px){
+ .hero.kids-hero2{min-height:0;display:block}
+ .kids-hero2 .hero-bg{position:relative;display:block;height:auto}.kids-hero2 .hero-bg img{position:relative;height:auto;aspect-ratio:640/560}
+ .kids-hero2::before{display:none}
+ .kids-text{padding:22px 20px 30px;background:#0b0f14}.kids-text>*{margin-left:0}
+ .kids-hero2 .cta-row .btn{flex:1 1 auto;justify-content:center}
+ .clase-panel{margin-top:0;padding-top:10px}.pergamino{padding:20px 14px}}
+/* Portada: a ~1280 px el texto del hero se alejaba poco del lobo; bloque más angosto y más a la izquierda */
+@media (min-width:1001px) and (max-width:1440px){.hero-fiordo .hero-text{max-width:480px;margin-left:calc(14vw - max(0px,(100vw - 1140px)/2) - 20px)}.hero-fiordo h1{font-size:clamp(2.3rem,3.6vw,3.4rem)}}
+.hero.kids-hero2{min-height:min(calc(100vw*821/1774),860px)}
+.kids-hero2 .hero-bg img{object-position:30% 0}
+.kids-text{padding-top:clamp(30px,4.5vw,70px)}
+.kids-text>*{max-width:500px}
+.kids-hero2 h1{font-size:clamp(2rem,3.2vw,3rem)}
+.pergamino h2{border:0;padding:0}.pergamino h2::before,.pergamino h2::after{display:none}
+/* ===== Metodología: puerto vikingo (imagen de referencia limpia) + paneles ===== */
+body.meto #site-nav{background:#07090d;backdrop-filter:none}body.meto #site-nav::after{display:none}
+.hero.meto-hero{display:block;background:#07090d;min-height:0;padding:26px 0 40px}
+.meto-hero::before{display:none}.meto-hero::after{height:80px;z-index:1}
+.meto-hero .hero-bg img{object-fit:cover;object-position:50% 0}
+.meto-col{position:relative;z-index:2;max-width:820px;margin-left:clamp(20px,calc(23vw - 40px),420px);display:grid;gap:18px}
+.meto-intro{padding:8px 4px}
+.nivel-tag{display:inline-block;border:1px solid #d9a84a;color:#f0c46a;border-radius:999px;padding:4px 14px;font:700 .72rem var(--body);letter-spacing:.14em;text-transform:uppercase;background:rgba(7,9,13,.6)}
+.meto-hero h1{font:800 clamp(2rem,3.4vw,3rem) var(--display);margin:12px 0 10px;text-shadow:0 2px 18px rgba(0,0,0,.8)}
+.meto-hero .lead{color:#e6ebf2;max-width:38em;text-shadow:0 1px 8px rgba(0,0,0,.9)}
+.meto-items{list-style:none;padding:0;margin:16px 0;display:grid;grid-template-columns:1fr 1fr;gap:12px 24px;max-width:600px}
+.meto-items li{display:flex;gap:10px;align-items:flex-start}.meto-items svg{width:34px;height:34px;flex:none}
+.meto-items strong{display:block;color:#fff}.meto-items span{font-size:.85rem;color:#c9d3df}
+.btn.oro{background:linear-gradient(#e6b75a,#b9852f);color:#1d1306;border:1px solid #f3d38c}
+.meto-panel{background:rgba(9,17,30,.88);border:1px solid #c9a15e88;border-radius:10px;padding:16px 18px;box-shadow:0 14px 34px rgba(0,0,0,.5)}
+.meto-panel h2{font:800 1.3rem var(--display);color:#f0c46a;border:0;padding:0;margin:0 0 12px}
+.meto-libros{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.meto-libro{display:flex;gap:12px;align-items:center;border:1px solid #2b3d55;border-radius:8px;padding:10px;background:rgba(255,255,255,.03)}
+.meto-libro img{width:84px;height:auto;border-radius:4px}.meto-libro h3{font:800 1rem var(--display);margin:0 0 4px}.meto-libro p{font-size:.84rem;color:#c3cdd9;margin:0 0 8px}
+.btn.pronto{cursor:default;opacity:.85;font-size:.75rem}
+.meto-casos{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px}
+.meto-casos .testimonio{padding:12px;font-size:.85rem}.meto-casos .avatar{width:58px;height:58px}
+.meto-casos blockquote{font-size:.84rem}
+@media (max-width:860px){.meto-col{margin:0 auto}.meto-casos,.meto-libros{grid-template-columns:1fr}}
+@media (max-width:700px){.meto-hero .hero-bg{position:relative;display:block;height:auto}.meto-hero .hero-bg img{position:relative;height:auto;aspect-ratio:640/519}
+ .hero.meto-hero{padding-top:0}.meto-items{grid-template-columns:1fr}.meto-intro{padding-top:16px}}
+.meto-casos .ejemplo{position:static;display:inline-block;margin-top:8px}
+@media (max-width:600px){table.niveles{display:block;overflow-x:auto;font-size:.82rem}}
+.meto-hero .hero-bg{bottom:auto;height:calc(100vw*755/1964)}
+.meto-hero .hero-bg::after{content:"";position:absolute;left:0;right:0;bottom:0;height:45%;background:linear-gradient(transparent,#07090d)}
+.meto-hero .hero-bg img{object-position:50% 0}
+@media (max-width:700px){.meto-hero .hero-bg{height:auto}.meto-hero .hero-bg::after{height:30%}}
+/* ===== Precios v3: mercado vikingo (imagen de referencia limpia) + paneles de pergamino ===== */
+body.precios-p #site-nav{background:#07090d;backdrop-filter:none}body.precios-p #site-nav::after{display:none}
+.precios-v3{position:relative;overflow:hidden;padding:0 0 30px;background:#07090d}
+.precios-bg{position:absolute;inset:0 0 auto 0;height:calc(100vw*978/1536)}
+.precios-bg img{width:100%;height:100%;object-fit:cover;object-position:50% 0}
+.precios-bg::after{content:"";position:absolute;left:0;right:0;bottom:0;height:25%;background:linear-gradient(transparent,#07090d)}
+.precios-hero{position:relative;z-index:2;display:grid;grid-template-columns:1fr auto;gap:20px;align-items:end;max-width:1100px;margin:0 auto;padding:24px 20px 10px 27vw}
+.precios-hero .kicker{color:#f0c46a;margin-bottom:4px}
+.precios-hero h1{font:800 clamp(1.9rem,3.3vw,3.1rem)/1.05 var(--display);margin:0 0 10px;text-shadow:0 2px 18px rgba(0,0,0,.85)}
+.precios-hero .lead{color:#eef2f7;max-width:34em;text-shadow:0 1px 8px rgba(0,0,0,.9);margin:0 0 12px}
+.ph-feats{list-style:none;margin:0;padding:0;display:flex;gap:18px;flex-wrap:wrap}
+.ph-feats li{display:flex;align-items:center;gap:8px;font-size:.82rem;max-width:140px;color:#fff;text-shadow:0 1px 6px #000}.ph-feats svg{width:36px;height:36px;flex:none}
+.aprende{font:800 .85rem var(--display);text-transform:uppercase;letter-spacing:.04em;color:#2b1c0e;max-width:190px;text-align:left;padding:14px 16px;cursor:pointer;border:1px solid #b8925a;border-radius:6px;background:radial-gradient(ellipse at center,#f6e7c4,#dcbd84);box-shadow:0 10px 26px rgba(0,0,0,.5)}
+.aprende:hover,.aprende:focus-visible{outline:3px solid #f0c46a;outline-offset:2px}
+.pgrid{position:relative;z-index:2;max-width:1440px;margin:16px auto 0;padding:0 3vw;display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.ppanel{color:#2b1c0e;border:1px solid #b8925a;border-radius:8px;padding:16px 16px 14px;background:radial-gradient(ellipse at center,#f6e7c4 0%,#ecd6a6 70%,#d9b97f 100%);box-shadow:0 16px 36px rgba(0,0,0,.55),inset 0 0 26px rgba(120,80,30,.35)}
+.ppanel.ancho{grid-column:1/-1;max-width:1000px;justify-self:center;width:100%}
+.ppanel h2{font:800 clamp(1.15rem,1.7vw,1.5rem) var(--display);text-transform:uppercase;color:#f6e7c4;background:#0d1b2e;border:1px solid #c9a15e;border-radius:999px;padding:6px 20px;display:inline-block;margin:0 0 4px}
+.psub{margin:4px 0 12px;color:#4a3420;font-size:.92rem}
+.pcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.pcard{position:relative;text-align:center;color:#e8edf3;background:linear-gradient(#10233b,#0a1626);border:1px solid #c9a15e;border-radius:6px;padding:30px 8px 10px}
+.pcard.top{box-shadow:0 0 0 2px #f0c46a inset}
+.pdesc{position:absolute;top:-10px;right:-6px;background:#c41f25;color:#fff;border-radius:6px;padding:3px 8px;line-height:1;box-shadow:0 4px 12px rgba(0,0,0,.4)}
+.pdesc b{display:block;font:800 1.45rem var(--display)}.pdesc small{font:700 .55rem var(--body);letter-spacing:.12em;text-transform:uppercase}
+.pcard h3{font:800 .95rem var(--display);margin:0;color:#fff}.pcnt{font-size:.76rem;color:#b9c6d6;min-height:2.2em}
+.pantes{font-size:.8rem;color:#9fb0c4;margin-top:6px}.pcop{font:800 1.12rem var(--display);color:#fff;margin:2px 0}
+.pxclase{display:inline-block;font-size:.74rem;font-weight:700;color:#7ee2a8;margin-top:4px}
+.pfx{font-size:.66rem;color:#8193a8;margin-top:4px}
+.suelta2{margin:12px 0 0;font-size:.9rem;color:#2b1c0e}.suelta2 s{color:#7a6248}.etq{display:inline-block;background:#c41f25;color:#fff;border-radius:999px;padding:1px 10px;font-size:.75rem;font-weight:700;margin-left:4px}
+.pcta{position:relative;z-index:2;text-align:center;justify-content:center;margin-top:22px}
+.precios-v3 .nota{position:relative;z-index:2;text-align:center}
+#politicas{max-width:560px;width:calc(100% - 32px);color:#2b1c0e;border:1px solid #b8925a;border-radius:10px;padding:22px 24px;background:radial-gradient(ellipse at center,#f6e7c4,#e3c890)}
+#politicas::backdrop{background:rgba(3,6,10,.72)}
+#politicas h2{font:800 1.3rem var(--display);border:0;padding:0;margin:0 0 10px;color:#0d1b2e}
+#politicas ul{margin:0 0 16px;padding-left:20px;line-height:1.5}
+@media (max-width:1000px){.pgrid{grid-template-columns:1fr}.precios-hero{padding-left:20px;grid-template-columns:1fr}}
+@media (max-width:700px){.precios-bg{position:relative;height:auto;display:block}.precios-bg img{height:auto;aspect-ratio:640/330}
+ .precios-hero{padding-top:14px}.pcards{grid-template-columns:repeat(2,1fr)}.pgrid{padding:0 12px}}
+.pcard{padding-top:40px}.pdesc{top:-8px;right:-4px}
+@media (max-width:700px){.precios-v3 .precios-bg{position:relative;inset:auto;height:auto}.precios-v3 .precios-bg img{position:static;display:block;width:100%;height:auto;aspect-ratio:640/330}}
+/* ===== Staff v3: aldea en el fiordo (imagen de referencia limpia) + panel ===== */
+body.staff-p #site-nav{background:#07090d;backdrop-filter:none}body.staff-p #site-nav::after{display:none}
+.staff-v3{position:relative;overflow:hidden;background:#07090d;padding-bottom:40px}
+.staff-bg{position:absolute;inset:0 0 auto 0;height:calc(100vw*825/1756)}
+.staff-bg img{width:100%;height:100%;object-fit:cover;object-position:50% 0}
+.staff-bg::after{content:"";position:absolute;left:0;right:0;bottom:0;height:25%;background:linear-gradient(transparent,#07090d)}
+.staff-hero{position:relative;z-index:2;max-width:620px;margin-left:22vw;padding:clamp(24px,4vw,56px) 20px 10px}
+.staff-hero .kicker{color:#f0c46a}
+.staff-hero h1{font:800 clamp(2rem,3.4vw,3.1rem) var(--display);margin:4px 0 10px;text-shadow:0 2px 18px rgba(0,0,0,.85)}
+.staff-hero .lead{color:#eef2f7;text-shadow:0 1px 8px rgba(0,0,0,.9);max-width:32em}
+.staff-hero .ph-feats{margin:14px 0 18px}
+.staff-panel{position:relative;z-index:2;max-width:880px;margin:10px 0 0 21vw;padding:16px 22px 22px;background:rgba(9,17,30,.92);border:1px solid #c9a15e;border-radius:8px;box-shadow:0 16px 40px rgba(0,0,0,.55);display:grid;gap:16px}
+.staff-panel h2{font:800 1.35rem var(--display);color:#f0c46a;border:0;padding:0;margin:0}
+.staff-lobo{display:grid;grid-template-columns:200px 1fr 1.1fr;gap:20px;align-items:center}
+.staff-lobo img{width:200px;height:auto}
+.sl-info h3{font:800 2rem var(--display);margin:0;color:#fff}
+.sl-rol{font:700 .8rem var(--display);letter-spacing:.12em;text-transform:uppercase;color:#f0c46a;margin:2px 0 12px}
+.sl-info blockquote{margin:0;font-style:italic;color:#d6dee8;line-height:1.5}
+.sl-datos{list-style:none;margin:0;padding:0 0 0 18px;border-left:1px solid #c9a15e66;display:grid;gap:12px}
+.sl-datos li{display:flex;gap:10px;align-items:center;font-size:.9rem;color:#e6ebf2}.sl-datos svg{width:36px;height:36px;flex:none}
+.staff-pronto{display:flex;gap:16px;align-items:center;border:1px dashed #c9a15e88;border-radius:8px;padding:12px 16px}
+.staff-pronto svg{width:72px;height:72px;flex:none}.staff-pronto h3{font:800 1.2rem var(--display);margin:0}
+.pronto-txt{margin:0;font:800 1rem var(--display);color:#ffe08a}
+@media (max-width:1000px){.staff-hero,.staff-panel{margin-left:auto;margin-right:auto}.staff-panel{margin:10px 16px 0}.staff-lobo{grid-template-columns:160px 1fr}.staff-lobo img{width:160px}.sl-datos{grid-column:1/-1;border-left:0;padding:0}}
+@media (max-width:700px){.staff-v3 .staff-bg{position:relative;inset:auto;height:auto;display:block}.staff-v3 .staff-bg img{position:static;display:block;height:auto;aspect-ratio:640/474}
+ .staff-lobo{grid-template-columns:1fr;text-align:center}.staff-lobo img{margin:0 auto}.sl-datos{text-align:left}}
+/* ===== Contacto v3: feria vikinga en el fiordo (imagen de referencia limpia) ===== */
+body.contacto-p #site-nav{background:#07090d;backdrop-filter:none}body.contacto-p #site-nav::after{display:none}
+.contacto-v3{position:relative;overflow:hidden;background:#07090d;min-height:calc(100vw*703/1916);padding-bottom:40px}
+.contacto-bg{position:absolute;inset:0 0 auto 0;height:calc(100vw*703/1916)}
+.contacto-bg img{width:100%;height:100%;object-fit:cover;object-position:50% 0}
+.contacto-bg::after{content:"";position:absolute;left:0;right:0;bottom:0;height:18%;background:linear-gradient(transparent,#07090d)}
+.contacto-hero{position:relative;z-index:2;max-width:640px;margin-left:27vw;padding:clamp(20px,3vw,44px) 20px 0}
+.ct-tag{display:inline-block;border:1px solid #d9a84a;color:#f0c46a;border-radius:4px;padding:4px 16px;font:700 .78rem var(--display);letter-spacing:.12em;text-transform:uppercase;background:rgba(7,9,13,.65)}
+.contacto-hero h1{font:800 clamp(2.2rem,3.8vw,3.6rem) var(--display);margin:10px 0 8px;text-shadow:0 2px 18px rgba(0,0,0,.85)}
+.contacto-hero .lead{color:#eef2f7;text-shadow:0 1px 8px rgba(0,0,0,.9);max-width:34em}
+.ct-cards{position:relative;z-index:2;display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:900px;margin:clamp(16px,2.4vw,36px) 0 0 26vw;padding:0 20px}
+.ct-card{display:block;text-align:center;color:#e8edf3;background:rgba(8,16,28,.92);border:1px solid #c9a15e;border-radius:8px;padding:44px 16px 18px;margin-top:28px;position:relative;box-shadow:0 14px 32px rgba(0,0,0,.55)}
+a.ct-card:hover,a.ct-card:focus-visible{text-decoration:none;border-color:#f0c46a;outline:2px solid #f0c46a;outline-offset:2px}
+.ct-ic{position:absolute;top:-28px;left:50%;transform:translateX(-50%);width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid #c9a15e}
+.ct-ic svg{width:28px;height:28px}.ct-ic.wa{background:#25a35a}.ct-ic.ig{background:linear-gradient(45deg,#f5a623,#e4242b,#a12bc0)}.ct-ic.fb{background:#1f6fe5}
+.ct-card h2{font:800 1.2rem var(--display);border:0;padding:0;margin:0 0 4px;color:#fff}
+.ct-dato{margin:0 0 10px;font-weight:700;letter-spacing:.04em}.ct-dato.pronto{color:#5aa9ff}
+.ct-txt{margin:0;font-size:.88rem;color:#c3cdd9}
+@media (max-width:1000px){.contacto-hero,.ct-cards{margin-left:auto;margin-right:auto}}
+@media (max-width:700px){.contacto-v3{min-height:0}.contacto-v3 .contacto-bg{position:relative;inset:auto;height:auto;display:block}.contacto-v3 .contacto-bg img{position:static;display:block;height:auto;aspect-ratio:640/472}
+ .ct-cards{grid-template-columns:1fr}}
