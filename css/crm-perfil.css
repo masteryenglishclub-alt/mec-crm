@@ -1,0 +1,64 @@
+/* MEC CRM · Perfil del estudiante (Mis clases), Teachers y lista de Estudiantes. Datos reales; sin ejemplos. */
+.sp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
+.sp-card{position:relative;background:rgba(10,20,34,.93);border:1px solid #c9a15e77;border-radius:10px;padding:16px 18px}
+.sp-card::before,.sp-card::after{content:"";position:absolute;width:26px;height:26px;background:url(../img/web/orn/esquina.svg) center/contain no-repeat;pointer-events:none}
+.sp-card::before{top:-5px;left:-5px}.sp-card::after{bottom:-5px;right:-5px;transform:rotate(180deg)}
+.sp-card.ancho{grid-column:1/-1}
+.sp-card h2{font:800 1.1rem var(--display);color:#f0c46a;margin:0 0 10px;border:0;padding:0;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sp-card h3{font:800 .82rem var(--display);color:#7fdcff;margin:10px 0 4px;text-transform:uppercase;letter-spacing:.04em}
+.sp-card ul{margin:0;padding-left:18px}
+.sp-dl{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0}.sp-dl dt{color:#9fb0c4}.sp-dl dd{margin:0}
+.sp-nivel{display:inline-block;background:#3ccf8e;color:#06200f;font-weight:800;border-radius:6px;padding:0 8px;margin-right:4px}
+.sp-paq{margin:0 0 10px}
+.sp-cont{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;margin-bottom:8px}
+.sp-cont div{background:#10233b;border-radius:8px;padding:8px}.sp-cont b{display:block;font:800 1.6rem var(--display)}.sp-cont small{color:#9fb0c4}
+.sp-barra{height:10px;background:#1a2a40;border-radius:6px;overflow:hidden}.sp-barra i{display:block;height:100%;background:linear-gradient(90deg,#2f7fe0,#3ccf8e)}
+.sp-small{font-size:.84rem;color:#a9b8ca;margin:8px 0}
+.sp-pend{color:#ffe08a;font-style:italic;margin:2px 0}
+.sp-btn{display:inline-block;background:#10233b;color:#fff;border:1px solid #c9a15e;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer}
+.sp-btn:hover{text-decoration:none;filter:brightness(1.15)}.sp-btn:focus-visible,.sp-tabs a:focus-visible{outline:2px solid #f0c46a;outline-offset:2px}
+.sp-btn.oro{background:linear-gradient(#e6b75a,#b9852f);color:#1d1306;border-color:#f3d38c}
+.sp-hist{margin:0;padding-left:20px;display:grid;gap:4px}.sp-hist time{display:inline-block;min-width:96px;color:#9fb0c4}
+.sp-cod{font:800 1.15rem var(--display);margin:0;color:#fff}
+.sp-variante{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px;padding:8px;border:1px dashed #2b3d55;border-radius:8px}
+.sp-tag{display:inline-block;font:700 .7rem var(--body);letter-spacing:.08em;text-transform:uppercase;border:1px solid #e7b04a;color:#ffe08a;border-radius:999px;padding:1px 9px}
+.sp-tag.ok{border-color:#3ccf8e;color:#7ee2a8}.sp-tag.ej{border-color:#c0862a;color:#f0c46a;background:#c0862a22}
+.sp-fb{list-style:none;padding:0!important;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+.sp-fb li{background:#10233b;border-left:3px solid #3ccf8e;border-radius:6px;padding:10px 12px}
+.sp-fb-h{display:flex;justify-content:space-between;gap:8px;font-size:.85rem}.sp-fb-h time{color:#9fb0c4;white-space:nowrap}.sp-fb p{margin:6px 0 0;font-size:.9rem}
+.sp-bio{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.sp-chart{width:100%;max-width:520px;height:auto}
+.sp-estilo{display:flex;gap:18px;align-items:center}.sp-donut{width:140px;height:140px;flex:none}
+.sp-ley{list-style:none;padding:0!important;display:grid;gap:6px}.sp-ley i{display:inline-block;width:14px;height:14px;border-radius:3px;margin-right:6px;vertical-align:-2px}
+.sp-intro{color:#c3cdd9;margin:0 0 12px}
+.sp-teachers{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px}
+.sp-teacher{position:relative;background:rgba(10,20,34,.94);border:1px solid var(--c);border-top:6px solid var(--c);border-radius:10px;padding:16px 18px}
+.sp-teacher header{display:flex;gap:14px;align-items:center}
+.sp-teacher header img{width:114px;height:auto}.sp-av{width:100px;height:100px;flex:none}
+.sp-teacher h2{font:800 1.5rem var(--display);margin:0;border:0;padding:0;color:#fff}
+.sp-rol{margin:0 0 6px;color:var(--c);font-weight:800;text-transform:uppercase;font-size:.78rem;letter-spacing:.1em;filter:brightness(1.4)}
+.sp-teacher h3{font:800 .8rem var(--display);color:#f0c46a;margin:12px 0 4px;text-transform:uppercase}
+.sp-teacher ul{margin:0;padding-left:18px}.sp-bio-t{margin:0;font-style:italic;color:#d6dee8}
+.sp-tcols{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+.sp-btn.tcolor{background:var(--c);border-color:var(--c);margin-top:12px}
+@media (max-width:640px){.sp-bio,.sp-tcols{grid-template-columns:1fr}.sp-teachers,.sp-grid{grid-template-columns:1fr}.sp-estilo{flex-direction:column;align-items:flex-start}.sp-tabs{flex-wrap:nowrap;overflow-x:auto}}
+/* Staff preview: lista de estudiantes */
+.st-filtros{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+.st-filtros label{display:flex;flex-direction:column;gap:4px;font-size:.8rem;color:#9fb0c4}
+.st-filtros input,.st-filtros select{background:#10233b;color:#fff;border:1px solid #c9a15e88;border-radius:8px;padding:8px 10px;min-width:180px}
+.st-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.st-item{display:flex;flex-direction:column;gap:6px;text-align:left;cursor:pointer;color:#e8edf3;background:rgba(10,20,34,.93);border:1px solid #c9a15e77;border-left:6px solid var(--c);border-radius:10px;padding:14px}
+.sol-f[aria-pressed="true"]{background:#3ccf8e;color:#06200f;border-color:#3ccf8e}
+.sol-tabla{width:100%;border-collapse:separate;border-spacing:0 8px;margin-top:6px}
+.sol-tabla th{text-align:left;font:800 .75rem var(--display);text-transform:uppercase;color:#f0c46a;padding:4px 12px}
+.sol-tabla td{background:rgba(10,20,34,.93);padding:12px;border-top:1px solid #c9a15e55;border-bottom:1px solid #c9a15e55}
+.sol-tabla td:first-child{border-left:6px solid var(--c);border-radius:8px 0 0 8px}.sol-tabla td:last-child{border-right:1px solid #c9a15e55;border-radius:0 8px 8px 0}
+.sol-prof{display:inline-flex;align-items:center;gap:8px}.sol-prof i{width:14px;height:14px;border-radius:4px;background:var(--c)}
+.sol-est{display:inline-block;border-radius:999px;padding:2px 10px;font-weight:800;font-size:.78rem}
+.sol-est.pendiente{background:#e7b04a33;color:#ffe08a;border:1px solid #e7b04a}.sol-est.aprobada{background:#3ccf8e22;color:#7ee2a8;border:1px solid #3ccf8e}.sol-est.rechazada{background:#e4242b22;color:#ff9a9e;border:1px solid #e4242b}
+.sol-acc{white-space:nowrap}.sol-acc .sp-btn{padding:6px 10px;margin-left:6px}.sol-ok{background:#1f7a48}.sol-no{background:#8e2b30}
+@media (max-width:760px){.sol-tabla thead{display:none}.sol-tabla,.sol-tabla tbody,.sol-tabla tr,.sol-tabla td{display:block;width:100%}
+ .sol-tabla tr{margin-bottom:12px;border-left:6px solid var(--c);border-radius:8px;overflow:hidden;background:rgba(10,20,34,.93);border-top:1px solid #c9a15e55}
+ .sol-tabla td{border:0!important;border-radius:0!important;padding:6px 12px;background:none;display:flex;justify-content:space-between;gap:10px}
+.pf-sec{margin-top:18px}.st-filtros{align-items:flex-end}
+.sp-hist time{margin-right:10px}
