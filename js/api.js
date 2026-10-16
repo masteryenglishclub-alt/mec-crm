@@ -147,6 +147,17 @@
       async getInternalNote(sid) { need("admin", "teacher"); if (!visibleStudents().some((s) => s.id === sid)) return null; const n = db.notes && db.notes[sid]; return n ? { notes: n } : null; },
       async listTeacherProfiles() { const tp = db.teacher_profiles || {}; // demo: sin perfiles hasta que se editen (sin datos de ejemplo)
         return Object.values(tp).filter((t) => t.published || t.teacher_id === me().id || role() === "admin").map((t) => Object.assign({}, t)); },
+      /* v3 perfil: reseñas/certificaciones aún no existen en la base; en DEMO solo hay datos si se carga js/demo-profesor.js (nunca se publica). */
+      async listTeacherReviews(tid) { if (!(role() === "admin" || (role() === "teacher" && me().id === tid))) return []; const d = window.MEC_DEMO_PROFESOR; return (d && d.reviews && d.reviews[tid]) || []; },
+      async listTeacherCertifications(tid) { const d = window.MEC_DEMO_PROFESOR; return (d && d.certifications && d.certifications[tid]) || []; },
+      /* v3 perfil: niveles A1–C1 calculados de los estudiantes reales del teacher (solo staff; un estudiante solo vería su propia fila). */
+      async teacherLevelCounts(tid) { const u = await this.currentUser(); if (!u || (u.role !== "admin" && !(u.role === "teacher" && u.id === tid))) return [];
+        const m = {}; (await this.listStudents()).filter((s) => s.teacher_id === tid && s.active !== false).forEach((s) => { const n = Math.min(160, Math.max(1, (s.start_class_number || 1) - 1 + (s.classes_completed || 0))); const l = M.classInfo(n, s.program).levelCode; m[l] = (m[l] || 0) + 1; });
+        return Object.keys(m).map((level) => ({ level, count: m[level] })); },
+      /* Sobre mí (bio, gustos, temas): solo el propio teacher. Devuelve { saved: [...], pending: [...] } */
+      async saveTeacherPersonal(tid, o) { if (!(role() === "teacher" && me().id === tid)) throw new Error("Solo el teacher puede editar su propio perfil.");
+        const old = (db.teacher_profiles || {})[tid]; if (!old) throw new Error("Tu perfil público aún no existe: créalo primero en «Mi perfil» del CRM.");
+        db.teacher_profiles[tid] = Object.assign({}, old, o, { teacher_id: tid, published: old.published }); save(); return { saved: Object.keys(o), pending: [] }; },
       async getTeacherProfile(tid) { const t = (db.teacher_profiles || {})[tid]; return t && (t.published || tid === me().id || role() === "admin") ? Object.assign({}, t) : null; },
       async saveTeacherProfile(tid, o) {
         need("admin", "teacher"); if (role() === "teacher" && tid !== me().id) throw new Error("Permiso denegado");
@@ -378,6 +389,27 @@
         return ts.map((t) => Object.assign(t, { full_name: (ps.find((p) => p.id === t.id) || {}).full_name, availability: (t.teacher_availability || []).map((a) => [a.weekday, a.start_hour, a.end_hour]) }));
       },
       async listPackages() { const c = await client(); return q(c.from("packages").select("*").eq("active", true).order("sort_order")); },
+      /* v3 perfil: tablas PROPUESTAS en supabase/proposed/ (no aplicadas). Mientras no existan, la consulta falla y la vista muestra estado vacío. */
+      async listTeacherReviews(tid) { const u = await this.currentUser(); if (!u || !(u.role === "admin" || (u.role === "teacher" && u.id === tid))) return []; const c = await client(); return q(c.from("teacher_reviews").select("rating, comment, author_name, created_at").eq("teacher_id", tid).eq("published", true).order("created_at", { ascending: false }).limit(500)); },
+      async listTeacherCertifications(tid) { const c = await client(); return q(c.from("teacher_certifications").select("title, issuer, year, kind").eq("teacher_id", tid).order("sort_order")); },
+      /* v3 perfil: niveles A1–C1 calculados de los estudiantes reales del teacher (solo staff; un estudiante solo vería su propia fila). */
+      async teacherLevelCounts(tid) { try { const c = await client(); return await q(c.rpc("teacher_level_counts", { p_teacher: tid })); } catch (e) { /* función propuesta aún no aplicada */ }
+        const u = await this.currentUser(); if (!u || (u.role !== "admin" && !(u.role === "teacher" && u.id === tid))) return [];
+        const m = {}; (await this.listStudents()).filter((s) => s.teacher_id === tid && s.active !== false).forEach((s) => { const n = Math.min(160, Math.max(1, (s.start_class_number || 1) - 1 + (s.classes_completed || 0))); const l = M.classInfo(n, s.program).levelCode; m[l] = (m[l] || 0) + 1; });
+        return Object.keys(m).map((level) => ({ level, count: m[level] })); },
+      /* Sobre mí: bio/hobbies/topics ya existen en teacher_public_profiles (RLS tpp_self_upd: solo su fila).
+         favorite_* son columnas PROPUESTAS: si aún no existen se informa con claridad qué no se guardó. */
+      async saveTeacherPersonal(tid, o) { const u = await this.currentUser(); if (!u || !(u.role === "teacher" && u.id === tid)) throw new Error("Solo el teacher puede editar su propio perfil.");
+        const c = await client(), base = { bio: o.bio, hobbies: o.hobbies, topics: o.topics }, extra = {};
+        ["favorite_foods", "favorite_countries", "favorite_books", "favorite_movies"].forEach((k) => { if (k in o) extra[k] = o[k]; });
+        const r = await q(c.from("teacher_public_profiles").update(base).eq("teacher_id", tid).select("teacher_id"));
+        if (!r.length) throw new Error("Tu perfil público aún no existe: créalo primero en «Mi perfil» del CRM.");
+        const res = { saved: Object.keys(base), pending: [] };
+        const hasExtra = Object.values(extra).some((v) => v && v.length);
+        if (Object.keys(extra).length) { const { error } = await c.from("teacher_public_profiles").update(extra).eq("teacher_id", tid);
+          if (error) { if (/column|schema cache|PGRST204|42703/i.test(`${error.code} ${error.message}`)) { if (hasExtra) res.pending = Object.keys(extra); } else throw new Error(error.message); }
+          else res.saved.push(...Object.keys(extra)); }
+        return res; },
       async getTeacherProfile(tid) { const c = await client(); const r = await q(c.from("teacher_public_profiles").select("*").eq("teacher_id", tid)); return r[0] || null; },
       async saveTeacherProfile(tid, o) { const c = await client(); await q(c.from("teacher_public_profiles").upsert(Object.assign({}, o, { teacher_id: tid }), { onConflict: "teacher_id" })); },
       async saveStudentProfile(sid, o) { const c = await client(); await q(c.from("student_profiles").upsert(Object.assign({}, o, { student_id: sid }), { onConflict: "student_id" })); },

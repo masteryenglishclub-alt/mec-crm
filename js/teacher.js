@@ -32,11 +32,11 @@
       const now = new Date(), cls = await api.listClasses({ from: new Date(now.getTime() - 21 * 864e5).toISOString() });
       const today = M.bog(now), isToday = (c) => { const p = M.bog(c.starts_at); return p.y === today.y && p.m === today.m && p.d === today.d; };
       const up = cls.filter((c) => c.status === "scheduled"), past = cls.filter((c) => c.status !== "scheduled").reverse();
-      app.innerHTML = `<h1>Mis clases</h1>
+      app.innerHTML = `<div class="tbg gbg"><div><h1>Mis clases</h1>
         <div class="grid g3" style="margin-bottom:18px"><div class="panel kpi blue"><b>${cls.filter(isToday).length}</b><span>Hoy</span></div>
         <div class="panel kpi"><b>${up.length}</b><span>Próximas agendadas</span></div><div class="panel kpi red"><b>${past.filter((c) => c.status === "completed" && !c.sentences && c.class_type !== "extra_reinforcement").length}</b><span>Feedback pendiente</span></div></div>
         <div class="panel rune"><h3>Próximas</h3>${up.map(card).join("") || '<p class="muted">Sin clases agendadas.</p>'}</div>
-        <div class="panel"><h3>Recientes (21 días)</h3>${past.map(card).join("") || '<p class="muted">—</p>'}</div>`;
+        <div class="panel"><h3>Recientes (21 días)</h3>${past.map(card).join("") || '<p class="muted">—</p>'}</div></div></div>`;
       M.$$("[data-att]").forEach((b) => (b.onclick = M.wrapErr(async () => { await api.markAttendance(b.dataset.id, b.dataset.att);
         const c = (await api.listClasses({ from: new Date(Date.now() - 22 * 864e5).toISOString() })).find((x) => x.id === b.dataset.id);
         M.toast("Asistencia guardada" + (c && c.status === "no_show" ? " · " + M.PENALTY_LABEL[c.late_penalty || "none"] : "")); render(); })));
@@ -49,10 +49,8 @@
     },
     async estudiantes() { // RLS: el teacher solo recibe a sus propios estudiantes
       const st = await api.listStudents();
-      app.innerHTML = `<h1>Estudiantes</h1><p class="muted">Tus estudiantes asignados. Abre un perfil para ver paquete, clases, feedback, BIO, progreso y estilo de aprendizaje.</p><div id="pf-root"></div>`;
-      await M.perfil.studentsBrowser(M.$("#pf-root"), { students: st, showTeacher: false,
-        extra: (s) => `<button class="btn ghost sm" data-extra="${s.id}">Agendar sesión de refuerzo</button>`,
-        bindExtra: (r) => r.querySelectorAll("[data-extra]").forEach((b) => (b.onclick = () => extra(b.dataset.extra))) });
+      app.innerHTML = `<div class="tbg2 gbg"><div><h1>Estudiantes</h1><p class="muted">Tus estudiantes asignados. Abre un perfil para ver paquete, clases, feedback, BIO, progreso y estilo de aprendizaje.</p><div id="pf-root"></div></div></div>`;
+      await M.perfil.studentsBrowser(M.$("#pf-root"), { students: st, showTeacher: false });
     },
     async progreso() {
       const [st, pr] = await Promise.all([api.listStudents(), api.listProgress()]);

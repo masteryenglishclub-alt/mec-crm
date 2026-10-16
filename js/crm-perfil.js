@@ -89,10 +89,10 @@
       const mine = t.teacher_id === opts.myTeacherId;
       return `<article class="sp-teacher" style="--c:${c}"><header>${t.photo_url ? `<img src="${esc(t.photo_url)}" width="114" height="133" alt="Foto de ${n}">` : avatar(c)}
         <div><h2>${n}</h2><p class="sp-rol">${esc(t.role_title || "Teacher")}</p>${mine ? '<span class="sp-tag ok">Tu teacher</span>' : ""}</div></header>
-        <h3>BIO</h3>${t.bio ? `<p class="sp-bio-t">${esc(t.bio)}</p>` : '<p class="sp-pend">Por completar</p>'}
+        ${opts.omitPersonal ? "" : `<h3>BIO</h3>${t.bio ? `<p class="sp-bio-t">${esc(t.bio)}</p>` : '<p class="sp-pend">Por completar</p>'}`}
         <div class="sp-tcols"><div><h3>Experiencia</h3>${lista(t.experience)}</div><div><h3>Fortalezas</h3>${lista(t.strengths)}</div>
         <div class="sp-ancho"><h3>Estilo de enseñanza</h3>${t.teaching_style ? estiloSvg({ Visual: t.teaching_style === "visual" ? 100 : 0, Auditivo: t.teaching_style === "auditivo" ? 100 : 0, "Kinestésico": t.teaching_style === "kinestesico" ? 100 : 0 }, "Estilo de enseñanza preferido") + `<p class="sp-small">Preferido: ${ESTILO[t.teaching_style]}</p>` : '<p class="sp-pend">Por completar</p>'}</div>
-        <div><h3>Hobbies y gustos</h3>${lista(t.hobbies)}</div><div><h3>Temas de interés</h3>${lista(t.topics)}</div></div>
+        ${opts.omitPersonal ? "" : `<div><h3>Hobbies y gustos</h3>${lista(t.hobbies)}</div><div><h3>Temas de interés</h3>${lista(t.topics)}</div>`}</div>
         ${opts.agendar ? (mine ? `<p><a class="sp-btn tcolor" href="${opts.agendar}">Agendar con ${n}</a></p>` : `<p class="sp-small">Para tomar clases con ${n}, pide al admin un cambio de teacher.</p>`) : ""}</article>`; }).join("")}</div>`;
   }
 
@@ -107,14 +107,18 @@
         ${opts.showTeacher ? `<label>Teacher<select id="pf-prof"><option value="">Todos</option>${teachers.map((t) => `<option>${esc(t)}</option>`).join("")}</select></label>` : ""}</div>
       <p class="sp-small" id="pf-cuenta" aria-live="polite"></p><div class="st-grid" id="pf-grid"></div></div><div id="pf-perfil" hidden></div>`;
     const $ = (s) => root.querySelector(s);
+    const next = {}, nowIso = new Date().toISOString();
+    try { (await api.listClasses()).filter((c) => c.status === "scheduled" && c.starts_at >= nowIso).sort((a, b) => (a.starts_at < b.starts_at ? -1 : 1)).forEach((c) => { if (!next[c.student_id]) next[c.student_id] = c; }); } catch (e) { /* sin clases visibles: se muestra "Sin agendar" */ }
     const draw = () => {
       const q = $("#pf-q").value.trim().toLowerCase(), nv = $("#pf-niv").value, pr = opts.showTeacher ? $("#pf-prof").value : "";
       const r = st.filter((s) => (!q || String(s.full_name || "").toLowerCase().includes(q)) && (!nv || lvl(s) === nv) && (!pr || (s.teacher_name || "Por asignar") === pr));
       $("#pf-cuenta").textContent = `${r.length} de ${st.length} estudiantes`;
       $("#pf-grid").innerHTML = r.map((s) => { const done = (s.start_class_number || 1) - 1 + (s.classes_completed || 0), i = M.classInfo(Math.max(1, done), s.program);
-        return `<div class="st-item" style="--c:#2f7fe0"><button type="button" class="link" data-pf="${s.id}" style="all:unset;cursor:pointer"><strong>${esc(s.full_name || "—")}</strong></button>
-        <span><span class="sp-nivel">${i.levelCode}</span> ${done ? esc(i.title) : "Sin clases aún"} · ${s.program === "kids" ? "Kids" : "Adultos"}</span>${opts.showTeacher ? `<small>Teacher: ${esc(s.teacher_name || "Por asignar")}</small>` : ""}
-        ${opts.extra ? opts.extra(s) : ""}</div>`; }).join("") || `<p class="sp-pend">${st.length ? "Sin resultados." : "Aún no hay estudiantes."}</p>`;
+        const ini = String(s.full_name || "?").trim().split(/\s+/).slice(0, 2).map((w) => w[0] || "").join("").toUpperCase(), nx = next[s.id];
+        return `<button type="button" class="st-item st-card" data-pf="${s.id}" aria-label="Abrir perfil de ${esc(s.full_name || "estudiante")}">
+        <span class="st-top"><span class="st-av" aria-hidden="true">${esc(ini)}</span><span class="st-id"><strong>${esc(s.full_name || "—")}</strong>
+        <span><span class="sp-nivel">${i.levelCode}</span> ${done ? esc(i.title) : "Sin clases aún"}</span><small>${s.program === "kids" ? "Kids" : "Adultos"}${opts.showTeacher ? ` · Teacher: ${esc(s.teacher_name || "Por asignar")}` : ""}</small></span></span>
+        <span class="st-prox">Próxima clase: ${nx ? `${esc(M.fmtDateTime(nx.starts_at))} · <b>Agendada</b>` : "<b>Sin agendar</b>"}</span></button>`; }).join("") || `<p class="sp-pend">${st.length ? "Sin resultados." : "Aún no hay estudiantes."}</p>`;
       if (opts.bindExtra) opts.bindExtra($("#pf-grid"));
     };
     const open = M.wrapErr(async (id) => {

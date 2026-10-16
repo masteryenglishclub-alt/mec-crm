@@ -12,49 +12,70 @@
     async agenda() {
       const to = new Date(week.getTime() + 7 * 864e5);
       const [cls, teachers, students, tps] = await Promise.all([api.listClasses({ from: week.toISOString(), to: to.toISOString() }), api.listTeachers(), api.listStudents(), api.listTeacherProfiles().catch(() => [])]);
-      const colors = M.teacherColors(teachers, tps);
+      const colors = M.teacherColors(teachers, tps), esc = M.esc;
       const shown = cls.filter((c) => !teacherFilter || c.teacher_id === teacherFilter);
-      const days = [1, 2, 3, 4, 5, 6].map((i) => new Date(week.getTime() + (i - 1) * 864e5));
-      let g = '<div class="hd">Hora</div>' + days.map((d) => `<div class="hd">${M.DOW[M.bog(d).dow]} ${M.bog(d).d}/${M.bog(d).m}</div>`).join("");
-      for (let h = 6; h < 18; h++) {
-        g += `<div class="hr">${String(h).padStart(2, "0")}:00</div>`;
-        days.forEach((d) => {
-          const p = M.bog(d), slot = M.bogDate(p.y, p.m, p.d, h);
-          const evs = shown.filter((c) => new Date(c.starts_at).getTime() === slot.getTime());
-          const valid = M.isValidSlot(slot);
-          g += `<div class="${valid ? "free" : "off"}" data-slot="${valid ? slot.toISOString() : ""}">` + evs.map((c) =>
-            `<div class="ev tc ${c.status} ${c.class_type === "conversation_lab" ? "lab" : ""} ${c.class_type === "extra_reinforcement" ? "extra" : ""}" data-id="${c.id}" style="--c:${colors[c.teacher_id] || "#5d6b80"}">
-              <b>${M.esc(c.student_name)}</b><br>${c.class_number ? "#" + c.class_number + " · " : ""}${M.esc(M.TYPE_LABEL[c.class_type])}<br><span class="muted">${M.esc((c.teacher_name || "").replace("Teacher Demo ", "T. "))}</span></div>`).join("") + "</div>";
-        });
+      const days = [1, 2, 3, 4, 5, 6].map((i) => new Date(week.getTime() + (i - 1) * 864e5)), H0 = 6, H1 = 17;
+      const today = M.bog(new Date()), hh = (h) => String(h).padStart(2, "0") + ":00";
+      const IC = { one: '<path d="M12 7a2.3 2.3 0 1 1 0 4.6A2.3 2.3 0 0 1 12 7zM7.5 17c.6-2.3 2.4-3.6 4.5-3.6s3.9 1.3 4.5 3.6" fill="none" stroke="currentColor" stroke-width="1.5"/>',
+        grp: '<path d="M9 8.5a1.8 1.8 0 1 1 0 3.6 1.8 1.8 0 0 1 0-3.6zM15 8.5a1.8 1.8 0 1 1 0 3.6 1.8 1.8 0 0 1 0-3.6zM5.5 16.5c.5-1.8 1.8-2.8 3.5-2.8s3 1 3.5 2.8M11.5 16.5c.5-1.8 1.8-2.8 3.5-2.8s3 1 3.5 2.8" fill="none" stroke="currentColor" stroke-width="1.4"/>',
+        conv: '<path d="M6 7h12v7h-7l-3.5 3v-3H6z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>',
+        star: '<path d="M12 6.5l1.6 3.3 3.6.5-2.6 2.5.6 3.6-3.2-1.7-3.2 1.7.6-3.6-2.6-2.5 3.6-.5z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>',
+        clock: '<circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 8v4.3l3 1.7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+        cal: '<rect x="4.5" y="6" width="15" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M4.5 10h15M8.5 4v4M15.5 4v4M8 13h2M11 13h2M14 13h2M8 16h2M11 16h2" stroke="currentColor" stroke-width="1.5"/>',
+        shield: '<path d="M12 4l6.5 2.5v5c0 4-2.8 6.8-6.5 8.5-3.7-1.7-6.5-4.5-6.5-8.5v-5z" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M9 12l2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.6"/>',
+        compass: '<g fill="none" stroke="currentColor" stroke-width="1"><circle cx="12" cy="12" r="6.2"/><circle cx="12" cy="12" r="8.6" stroke-dasharray="1 1.2"/></g><path d="M12 1.5l1.6 8.9L12 12l-1.6-1.6zM12 22.5l-1.6-8.9L12 12l1.6 1.6zM1.5 12l8.9-1.6L12 12l-1.6 1.6zM22.5 12l-8.9 1.6L12 12l1.6-1.6z" fill="currentColor"/><path d="M5 5l5.6 5.6M19 19l-5.6-5.6M19 5l-5.6 5.6M5 19l5.6-5.6" stroke="currentColor" stroke-width=".9"/>',
+        mount: '<path d="M3 19l6-9 3.5 5 2.5-3.5L21 19z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>' };
+      const svg = (k, cl = "") => `<svg viewBox="0 0 24 24" class="${cl}" aria-hidden="true">${IC[k]}</svg>`;
+      const prog = (c) => (students.find((x) => x.id === c.student_id) || {}).program;
+      const kind = (c) => prog(c) === "kids" ? ["kids", "Kids", "star"] : c.class_type === "conversation_lab" ? ["conv", "Conversación", "conv"]
+        : c.class_type === "extra_reinforcement" ? ["grp", "Refuerzo", "grp"] : ["gen", "Inglés General", "one"];
+      let g = `<div class="agv-hd agv-hcol">${svg("clock")}<span>Hora</span></div>` + days.map((d) => { const p = M.bog(d), now = p.y === today.y && p.m === today.m && p.d === today.d;
+        return `<div class="agv-hd${now ? " hoy" : ""}">${M.DOW[p.dow]} ${String(p.d).padStart(2, "0")}/${String(p.m).padStart(2, "0")}</div>`; }).join("");
+      for (let h = H0; h <= H1; h++) {
+        g += `<div class="agv-hora" style="grid-row:${h - H0 + 2}">${hh(h)}</div>`;
+        days.forEach((d, i) => { const p = M.bog(d), slot = M.bogDate(p.y, p.m, p.d, h), valid = M.isValidSlot(slot);
+          g += `<div class="agv-celda ${valid ? "free" : "off"}" style="grid-row:${h - H0 + 2};grid-column:${i + 2}" ${valid ? `data-slot="${slot.toISOString()}" title="Agendar ${M.DOW[p.dow]} ${hh(h)}"` : ""}></div>`; });
       }
+      shown.forEach((c) => { const p = M.bog(c.starts_at), di = days.findIndex((d) => { const q = M.bog(d); return q.y === p.y && q.m === p.m && q.d === p.d; });
+        if (di < 0 || p.h < H0 || p.h > H1) return; const k = kind(c);
+        g += `<button type="button" class="agv-b t-${k[0]} st-${c.status}" data-id="${c.id}" style="grid-row:${p.h - H0 + 2};grid-column:${di + 2};--tc:${colors[c.teacher_id] || "#5d6b80"}" title="${esc(k[1])} · ${esc(c.student_name)} · ${esc(c.teacher_name || "")} · ${M.STATUS_LABEL[c.status] || ""}">
+          ${svg(k[2])}<span class="agv-b-t">${k[1]}</span><span class="agv-b-s">(${c.class_type === "extra_reinforcement" ? "extra" : "1 a 1"}) · ${esc(c.student_name)}</span><span class="agv-b-h">${hh(p.h)} – ${hh(p.h + 1)}</span><i class="agv-dot" title="${esc(c.teacher_name || "")}"></i></button>`; });
+      const ini = (n) => String(n || "?").replace(/^Teacher\s+/i, "").split(/\s+/).filter(Boolean).slice(-2).map((x) => x[0]).join("").toUpperCase();
       const wEnd = new Date(week.getTime() + 5 * 864e5);
-      app.innerHTML = `<header class="ag-hero"><img src="img/web/hero-agenda-1280.jpg" alt="" width="1536" height="911" decoding="async"><div><span class="sp-kicker">Tu camino en inglés</span><h1>Agenda semanal</h1><p>Cada clase te acerca a tus metas.</p></div></header>
-        <div class="panel"><div class="row">
-          <div style="flex:0 0 auto"><button class="btn ghost sm" id="prev">◀ Semana anterior</button> <button class="btn ghost sm" id="today">Hoy</button> <button class="btn ghost sm" id="next">Semana siguiente ▶</button></div>
-          <div><b>${M.fmtDate(week)} – ${M.fmtDate(wEnd)}</b> <span class="muted small">· hora Bogotá (UTC-5) · bloques de 60 min (55 + 5)</span></div>
-          <div style="flex:0 0 240px"><select id="tf"><option value="">Todos los teachers</option>${teachers.map((t) => `<option value="${t.id}" ${t.id === teacherFilter ? "selected" : ""}>${M.esc(t.full_name)}</option>`).join("")}</select></div>
-        </div></div>
-        <div class="ag-wrap2"><div><div class="table-wrap"><div class="sched">${g}</div></div>
-        <p class="muted small">Clic en un bloque libre para agendar · clic en una clase para ver detalles. Franjas rayadas = fuera del horario (L-V 6:00-18:00, sáb 10:00-16:00).</p></div>
-        <aside class="ag-side" aria-labelledby="ley-t"><h2 id="ley-t">Teachers</h2><ul class="ag-ley">${teachers.map((t) => `<li><i style="background:${colors[t.id]}"></i><strong>${M.esc(t.full_name)}</strong></li>`).join("") || '<li class="muted">Sin teachers</li>'}</ul>
-          <h2>Estado</h2><ul class="ag-ley"><li>Texto tachado = clase cancelada</li><li>Clic en un bloque libre = agendar</li></ul></aside></div>`;
+      app.innerHTML = `<div class="agv">
+        <div class="agv-bg" aria-hidden="true"><img src="img/web/hero-agenda-1280.jpg" alt="" width="1536" height="911" decoding="async"></div>
+        <div class="agv-top"><header class="agv-hero">${svg("compass", "agv-rosa")}<div><span class="agv-tag">Tu camino en inglés</span><h1>Agenda semanal</h1><p>Cada clase te acerca a tus metas. Organiza tu tiempo, vive el proceso y construye tu futuro.</p></div></header>
+        <aside class="agv-pergamino">${svg("compass")}<div><strong>Tu esfuerzo hoy, es tu libertad mañana</strong><small>${(() => { const n = cls.filter((c) => { const q = M.bog(c.starts_at); return q.y === today.y && q.m === today.m && q.d === today.d && c.status !== "cancelled"; }).length; return n ? `Hoy: ${n} clase${n === 1 ? "" : "s"} agendada${n === 1 ? "" : "s"}` : "Hoy: sin clases agendadas"; })()}</small></div><span aria-hidden="true">→</span></aside></div>
+        <div class="agv-wrap"><section class="agv-main" aria-label="Calendario semanal">
+          <div class="agv-tool"><div class="agv-nav"><button type="button" class="agv-btn" id="prev"><b>‹</b> Semana anterior</button><button type="button" class="agv-btn oro" id="today">Hoy</button><button type="button" class="agv-btn" id="next">Semana siguiente <b>›</b></button></div>
+            <div class="agv-rango">${svg("cal", "agv-ic")}<div><strong>${M.fmtDate(week)} – ${M.fmtDate(wEnd)}</strong><small>Hora: Bogotá (UTC-5) · Bloques de 60 min (55 + 5)</small></div></div>
+            <label class="agv-sel">${svg("one", "agv-ic")}<span class="sr-only">Filtrar por teacher</span><select id="tf"><option value="">Todos los teachers</option>${teachers.map((t) => `<option value="${t.id}" ${t.id === teacherFilter ? "selected" : ""}>${esc(t.full_name)}</option>`).join("")}</select></label></div>
+          <div class="agv-scroll"><div class="agv-grid" style="grid-template-rows:42px repeat(${H1 - H0 + 1},92px)">${g}</div></div>
+          <p class="agv-ayuda">Clic en un bloque libre para agendar · clic en una clase para ver detalles · franjas rayadas: fuera del horario (L-V 6:00-18:00, sáb 10:00-16:00). El punto de color indica el teacher.</p></section>
+        <aside class="agv-side" aria-labelledby="agv-t-h"><div class="agv-marco"><h2 id="agv-t-h">Nuestros teachers</h2>
+          <ul class="agv-teachers">${teachers.map((t) => `<li><a href="profesor.html?id=${encodeURIComponent(t.id)}" target="_blank" rel="noopener" style="--tc:${colors[t.id]}" title="Ver perfil de ${esc(t.full_name)} (pestaña nueva)"><span class="agv-av">${esc(ini(t.full_name))}</span><span class="agv-tn">${esc(t.full_name)}</span></a></li>`).join("") || '<li class="muted">Sin teachers</li>'}</ul>
+          <p class="agv-hint">Clic en un teacher para ver su perfil</p></div>
+          <blockquote class="agv-quote"><p>“Cada clase cuenta: la constancia de hoy es la fluidez de mañana.”</p><footer>— Mastery English Club</footer></blockquote>
+          <ul class="agv-feat"><li>${svg("cal")}<span>Clases dinámicas y personalizadas</span></li><li>${svg("grp")}<span>Profesores certificados</span></li><li>${svg("shield")}<span>Metodología comprobada</span></li><li>${svg("star")}<span>Acompañamiento constante</span></li></ul>
+          <button type="button" class="agv-cta" id="agv-cta">${svg("cal")} Tu clase, tu momento →</button></aside></div></div>`;
       M.$("#prev").onclick = () => { week = new Date(week.getTime() - 7 * 864e5); render(); };
       M.$("#next").onclick = () => { week = new Date(week.getTime() + 7 * 864e5); render(); };
       M.$("#today").onclick = () => { week = M.weekStart(new Date()); render(); };
       M.$("#tf").onchange = (e) => { teacherFilter = e.target.value; render(); };
-      M.$$(".sched .free").forEach((cell) => (cell.onclick = (e) => { if (e.target.closest(".ev")) return; newClass(cell.dataset.slot, teachers, students); }));
-      M.$$(".ev").forEach((el) => (el.onclick = () => classDetail(cls.find((c) => c.id === el.dataset.id))));
+      M.$$(".agv-celda.free").forEach((cell) => (cell.onclick = () => newClass(cell.dataset.slot, teachers, students)));
+      M.$$(".agv-b").forEach((el) => (el.onclick = () => classDetail(cls.find((c) => c.id === el.dataset.id))));
+      M.$("#agv-cta").onclick = () => { const f = M.$$(".agv-celda.free").find((c) => new Date(c.dataset.slot) > new Date()); if (f) newClass(f.dataset.slot, teachers, students); else M.toast("No hay bloques libres esta semana", true); };
     },
     async solicitudes() {
       const [reqs, teachers, tps] = await Promise.all([api.listRequests(), api.listTeachers(), api.listTeacherProfiles().catch(() => [])]);
       const colors = M.teacherColors(teachers, tps);
       const shown = reqs.filter((r) => (!teacherFilter || r.teacher_id === teacherFilter) && (!reqStatus || r.status === reqStatus));
       const cnt = (st) => reqs.filter((r) => (!teacherFilter || r.teacher_id === teacherFilter) && (!st || r.status === st)).length;
-      app.innerHTML = `<h1>Solicitud de clases</h1><p class="muted">Solo el admin aprueba o rechaza. Los teachers ven el estado en modo lectura.</p>
+      app.innerHTML = `<div class="gbg bg-sol"><div class="stt-in"><h1>Solicitud de clases</h1><p class="muted">Solo el admin aprueba o rechaza. Los teachers ven el estado en modo lectura.</p>
         <div class="row" role="group" aria-label="Filtrar por estado" style="margin-bottom:10px;gap:6px;flex-wrap:wrap">${[["", "Todas"], ["pending", "Pendientes"], ["approved", "Aprobadas"], ["rejected", "Rechazadas"], ["cancelled", "Retiradas"]].map(([k, n]) => `<button type="button" class="sp-btn sol-f" data-rs="${k}" aria-pressed="${k === reqStatus}">${n} (${cnt(k)})</button>`).join("")}</div>
         <div class="panel"><div class="row"><div class="muted">Un calendario por teacher. Las solicitudes pendientes no bloquean el bloque; al aprobar se vuelve a verificar todo.</div>
         <div style="flex:0 0 240px"><select id="tf"><option value="">Todos los teachers</option>${teachers.map((t) => `<option value="${t.id}" ${t.id === teacherFilter ? "selected" : ""}>${M.esc(t.full_name)} (${reqs.filter((r) => r.teacher_id === t.id && r.status === "pending").length})</option>`).join("")}</select></div></div></div>
-        <div class="legend">${teachers.map((t) => `<span><i style="background:${colors[t.id]}"></i>${M.esc(t.full_name)}</span>`).join("")}</div>${M.requestsTable(shown, colors)}`;
+        <div class="legend">${teachers.map((t) => `<span><i style="background:${colors[t.id]}"></i>${M.esc(t.full_name)}</span>`).join("")}</div><div class="panel sol-tw">${M.requestsTable(shown, colors)}</div></div></div>`;
       M.$("#tf").onchange = (e) => { teacherFilter = e.target.value; render(); };
       M.$$("[data-rs]").forEach((b) => (b.onclick = () => { reqStatus = b.dataset.rs; render(); }));
       M.bindRequests(api, render);

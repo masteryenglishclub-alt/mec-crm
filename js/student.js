@@ -129,14 +129,14 @@
       const [s, cls, b, pkgs] = await Promise.all([data(), api.listClasses(), api.bookingStatus(), api.listStudentPackages()]);
       const prof = await api.getStudentProfile(s.id), now = new Date().toISOString();
       const up = cls.filter((c) => c.status === "scheduled" && c.starts_at >= now);
-      app.innerHTML = `<h1>Mis clases</h1>${M.perfil.misClases({ s, pkgs, classes: cls, prof, self: true, agendar: "#solicitar" })}
+      app.innerHTML = `<div class="smc"><div class="stt-in"><h1>Mis clases</h1>${M.perfil.misClases({ s, pkgs, classes: cls, prof, self: true, agendar: "#solicitar" })}
         <div class="panel rune pf-sec"><h3>Próximas clases agendadas</h3>${up.map(clsRow).join("") || '<p class="muted">Sin clases agendadas.</p>'}
-        <p class="small muted">Horario en hora de Bogotá. El enlace de Google Meet se activa a la hora de tu clase. Cancelación sin cargo hasta ${b.late_cancel_hours} h antes · pases libres: ${b.passes_remaining} de ${b.passes_total}.</p></div>`;
+        <p class="small muted">Horario en hora de Bogotá. El enlace de Google Meet se activa a la hora de tu clase. Cancelación sin cargo hasta ${b.late_cancel_hours} h antes · pases libres: ${b.passes_remaining} de ${b.passes_total}.</p></div></div></div>`;
       M.perfil.bindTest(app); bindCancel(b);
     },
     async teachers() {
       const [s, list] = await Promise.all([data(), api.listTeacherProfiles()]);
-      app.innerHTML = `<h1>Teachers</h1>${M.perfil.teachersView(list, { myTeacherId: s.teacher_id, agendar: "#solicitar" })}`;
+      app.innerHTML = `<div class="stt"><div class="stt-in"><h1>Teachers</h1>${M.perfil.teachersView(list, { myTeacherId: s.teacher_id, agendar: "#solicitar" })}</div></div>`;
     },
     async feedback() {
       const cls = (await api.listClasses()).filter((c) => c.sentences || c.teacher_note).reverse();
