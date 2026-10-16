@@ -1,0 +1,32 @@
+/* Mastery4Kids: fondo nórdico continuo en toda la página (solo kids.html, body.kids-bg) */
+body.web.kids-bg{background:
+  radial-gradient(70% 600px at 25% 1100px,rgba(60,207,142,.20),transparent 70%),radial-gradient(60% 520px at 80% 1500px,rgba(47,182,255,.22),transparent 70%),
+  radial-gradient(60% 520px at 20% 2300px,rgba(255,204,51,.10),transparent 70%),radial-gradient(70% 600px at 75% 2800px,rgba(60,207,142,.18),transparent 70%),
+  url(../img/web/paisaje.svg) center bottom/100% auto no-repeat,
+  url(../img/web/kids-estrellas.svg) 0 0/400px 400px repeat,
+  linear-gradient(180deg,#0a1a2e 0%,#0c2340 40%,#0f3040 75%,#123a3a 100%);min-height:100vh}
+body.kids-bg .kids-hero2{background:transparent}
+body.kids-bg .kids-hero2::after{background:linear-gradient(180deg,transparent,rgba(8,19,32,0))}
+body.kids-bg .hero-bg{-webkit-mask-image:linear-gradient(180deg,#000 75%,transparent);mask-image:linear-gradient(180deg,#000 75%,transparent)}
+body.kids-bg section.sec{background:transparent;position:relative}
+body.kids-bg section.sec>.wrap{background:rgba(9,22,38,.86);border:1px solid #c9a15e88;border-radius:16px;padding:28px 32px;box-shadow:0 10px 40px rgba(0,0,0,.45);position:relative}
+body.kids-bg section.sec>.wrap::before,body.kids-bg section.sec>.wrap::after{content:"";position:absolute;width:30px;height:30px;background:url(../img/web/orn/esquina.svg) center/contain no-repeat;pointer-events:none}
+body.kids-bg section.sec>.wrap::before{top:-6px;left:-6px}body.kids-bg section.sec>.wrap::after{bottom:-6px;right:-6px;transform:rotate(180deg)}
+body.kids-bg section.sec+section.sec{margin-top:10px}
+body.kids-bg .kids-mascota{float:right;width:min(240px,32%);margin:0 0 12px 20px;filter:drop-shadow(0 12px 28px rgba(47,182,255,.4));shape-outside:margin-box}
+body.kids-bg .kids-banda{height:20px;background:url(../img/web/orn/banda-nudo.svg) repeat-x center/40px 20px;opacity:.8;margin:26px 0}
+body.kids-bg footer.site{background:rgba(5,10,18,.85)}
+@media (max-width:700px){body.kids-bg section.sec>.wrap{padding:20px 16px;border-radius:12px}body.kids-bg .kids-mascota{width:120px}}
+body.kids-bg section.sec{padding:36px 0}
+/* v2: el atardecer del hero continúa por toda la página + elementos flotantes infantiles */
+body.web.kids-bg{padding-bottom:0;background:
+  url(../img/web/kids-deco.svg) center 700px/1440px 1600px repeat-y,
+  url(../img/web/kids-fiordo.svg) center bottom 120px/100% auto no-repeat,linear-gradient(#22301f,#22301f) center bottom/100% 122px no-repeat,
+  url(../img/web/kids-estrellas.svg) 0 600px/400px 400px repeat,
+  radial-gradient(60% 500px at 20% 1300px,rgba(255,217,61,.14),transparent 70%),radial-gradient(55% 500px at 85% 1900px,rgba(199,125,255,.16),transparent 70%),
+  radial-gradient(60% 500px at 30% 2500px,rgba(47,182,255,.14),transparent 70%),
+  linear-gradient(180deg,#3a2a3a 0%,#4a3350 16%,#3a2f5c 32%,#26305e 52%,#1f3a63 72%,#1c2f4d 100%)}
+body.kids-bg main,body.kids-bg>section:last-of-type{position:relative}
+body.kids-bg .hero-bg{-webkit-mask-image:linear-gradient(180deg,#000 80%,transparent);mask-image:linear-gradient(180deg,#000 80%,transparent)}
+body.kids-bg footer.site{margin-top:540px;background:rgba(12,20,34,.88)}
+body.kids-bg section.sec>.wrap{background:rgba(20,22,48,.88);border-color:#e9c17299}
