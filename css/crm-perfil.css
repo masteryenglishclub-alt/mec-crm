@@ -62,3 +62,4 @@
  .sol-tabla td{border:0!important;border-radius:0!important;padding:6px 12px;background:none;display:flex;justify-content:space-between;gap:10px}
 .pf-sec{margin-top:18px}.st-filtros{align-items:flex-end}
 .sp-hist time{margin-right:10px}
+.pf-fs{border:1px solid #c9a15e55;border-radius:8px;padding:10px 14px;margin:12px 0}.pf-fs legend{color:#f0c46a;font-weight:800;padding:0 6px}.pf-check{display:flex;gap:8px;align-items:center;margin:12px 0}.pf-check input{width:auto}
