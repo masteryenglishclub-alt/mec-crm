@@ -44,6 +44,8 @@
   M.paymentBanner = (b) => b && b.payment_blocked ? `<div class="panel pay-block" role="alert"><h3>⚠ Pago pendiente: tu paquete aún no se puede usar</h3>
     <p>El paquete <b>${M.esc(b.pending_payment_codes || "")}</b> (${b.pending_payment_classes} clases) tiene el pago pendiente. Mientras no se confirme el pago <b>no puedes solicitar ni reservar clases</b>.</p>
     <p class="small muted">Si ya pagaste, envía el comprobante al equipo de MEC; el admin lo confirma y tu calendario se habilita de inmediato.</p></div>` : "";
+  M.cop = (n) => n == null ? "—" : "$" + Number(n).toLocaleString("es-CO") + " COP";
+  M.packageExpiry = (d, pk) => { if (!d || !pk || !pk.validity_months) return null; const x = new Date(d + "T12:00:00Z"); x.setUTCMonth(x.getUTCMonth() + pk.validity_months); return x.toISOString().slice(0, 10); };
   M.PAY_LABEL = { pending: "Pendiente", paid: "Pagado", partial: "Parcial", overdue: "Vencido", refunded: "Reembolsado", cancelled: "Anulado" };
 
   /** Información de una clase del programa (1-160) */

@@ -78,7 +78,7 @@
           <td><button class="btn sm" data-pkg="${s.id}">+ Paquete</button></td></tr>`).join("")}</tbody></table></div></div>
         <h2>Paquetes comprados</h2>
         <div class="panel"><div class="table-wrap"><table><thead><tr><th>Estudiante</th><th>Paquete</th><th>Usadas</th><th>Restantes</th><th>Compra</th><th>Vence</th><th>Pago</th><th>Próx. cobro (Zoho)</th></tr></thead><tbody>
-        ${pk.map((p) => `<tr><td>${M.esc((st.find((s) => s.id === p.student_id) || {}).full_name)}</td><td>${p.package_code} · ${p.classes_total} clases</td><td>${p.classes_used}</td><td><b>${p.classes_remaining}</b></td>
+        ${pk.map((p) => `<tr><td>${M.esc((st.find((s) => s.id === p.student_id) || {}).full_name)}</td><td>${M.esc(p.package_code)} · ${p.classes_total} clases${p.amount_cop ? `<br><span class="muted small">${M.cop(p.amount_cop)}</span>` : ""}</td><td>${p.classes_used}</td><td><b>${p.classes_remaining}</b></td>
           <td>${M.fmtDate(p.purchase_date)}</td><td>${p.expiry_date ? M.fmtDate(p.expiry_date) : "—"}</td><td><select data-pay="${p.id}" style="min-width:120px">${Object.entries(M.PAY_LABEL).map(([k, v]) => `<option value="${k}" ${k === p.payment_status ? "selected" : ""}>${v}</option>`).join("")}</select>
           ${p.usable ? "" : `<br><span class="small" style="color:var(--warn)">No usable: ${p.payment_status === "pending" ? "pago pendiente" : p.payment_status === "refunded" || p.payment_status === "cancelled" ? "anulado" : "vencido"}</span>`}</td>
           <td>${p.next_billing_date ? M.fmtDate(p.next_billing_date) : '<span class="muted">—</span>'}</td></tr>`).join("") || '<tr><td colspan="8" class="muted">Sin paquetes</td></tr>'}</tbody></table></div></div>`;
@@ -108,9 +108,11 @@
     },
     async paquetes() {
       const [p, cfg] = await Promise.all([api.listPackages(), api.settings()]);
-      app.innerHTML = `<h1>Catálogo de paquetes</h1><div class="panel"><div class="table-wrap"><table><thead><tr><th>Paquete</th><th>Clases</th><th>Lista (USD)</th><th>Descuento</th><th>Total (USD)</th><th>Por clase</th><th>Ahorro</th></tr></thead><tbody>
-        ${p.map((x) => `<tr><td><b>${x.code}</b></td><td>${x.classes}</td><td>${(+x.list_usd).toFixed(2)}</td><td>${+x.discount_pct}%</td><td><b>${(+x.total_usd).toFixed(2)}</b></td><td>${(x.total_usd / x.classes).toFixed(2)}</td><td>${(x.list_usd - x.total_usd).toFixed(2)}</td></tr>`).join("")}
-        </tbody></table></div><p class="muted small">Base 30 USD/clase. Escala aprobada 5/12/19/26/33/40 %. La facturación real vive en Zoho (ver ZOHO_SYNC.md).</p></div>
+      const KIND = { personalizada: "Personalizadas", grupal: "Grupales", combinado: "Combinado", suelta: "Clase suelta" };
+      app.innerHTML = `<h1>Catálogo de paquetes</h1><div class="panel"><div class="table-wrap"><table><thead><tr><th>Código</th><th>Nombre (Zoho)</th><th>Tipo</th><th>Clases</th><th>Precio (COP, IVA incluido)</th><th>Por clase</th><th>Vigencia</th></tr></thead><tbody>
+        ${p.map((x) => `<tr><td><b>${M.esc(x.code)}</b></td><td>${M.esc(x.name)}</td><td>${KIND[x.kind] || ""}</td><td>${x.kind === "combinado" ? `${x.personal_classes} pers. + ${x.group_classes} grup.` : x.classes}</td>
+          <td><b>${M.cop(x.price_cop)}</b>${x.list_price_cop ? ` <s class="muted small">${M.cop(x.list_price_cop)}</s>` : ""}</td><td>${M.cop(Math.round(x.price_cop / x.classes))}</td><td>${x.validity_months === 12 ? "1 año" : "6 meses"}</td></tr>`).join("")}
+        </tbody></table></div><p class="muted small">Tabla oficial v3. Vigencia: 20 clases o menos, 6 meses; más de 20, 1 año. Los paquetes grupales y combinados existen, aunque el modelo de grupos sigue desactivado. El catálogo antiguo en USD está desactivado y solo se conserva en el historial. La facturación real vive en Zoho.</p></div>
         <h2>Política de cancelación</h2><div class="panel"><div class="row">
           <div><label>Pases libres por estudiante y periodo</label><input id="fp" type="number" min="0" max="20" value="${cfg.free_passes_per_period}"></div>
           <div><label>Duración del periodo (meses)</label><input id="pm" type="number" min="1" max="24" value="${cfg.pass_period_months}"></div>
@@ -122,10 +124,14 @@
         await api.setSetting("min_request_hours", M.$("#mh").value); M.toast("Configuración guardada"); });
     },
     async teachers() {
-      const t = await api.listTeachers();
-      app.innerHTML = `<h1>Teachers</h1>` + t.map((x) => `<div class="panel"><h3>${M.esc(x.full_name)}</h3>
+      const [t, tp] = await Promise.all([api.listTeachers(), api.listTeacherProfiles()]);
+      app.innerHTML = `<h1>Teachers</h1>` + t.map((x) => { const pf = tp.find((p) => p.teacher_id === x.id); return `<div class="panel"><h3>${M.esc(x.full_name)}</h3>
+        <p>Perfil público: ${!pf ? '<span class="tag">Sin perfil</span>' : pf.published ? '<span class="tag r-approved">Publicado</span>' : '<span class="tag r-pending">Sin publicar</span>'}
+        <button class="btn sm" data-tpedit="${x.id}">${pf ? "Editar perfil" : "Crear perfil"}</button></p>
         <label>Enlace fijo de Google Meet</label><div class="row"><input value="${M.esc(x.meet_url || "")}" data-meet="${x.id}" placeholder="https://meet.google.com/xxx-xxxx-xxx"><button class="btn" style="flex:0 0 auto" data-save="${x.id}">Guardar</button></div>
-        <p class="muted small" style="margin-top:8px">Disponibilidad: ${(x.availability || []).map(([d, a, b]) => `${M.DOW[d]} ${a}:00–${b}:00`).join(" · ") || "sin registrar (se permite cualquier bloque del horario general)"}</p></div>`).join("");
+        <p class="muted small" style="margin-top:8px">Disponibilidad: ${(x.availability || []).map(([d, a, b]) => `${M.DOW[d]} ${a}:00–${b}:00`).join(" · ") || "sin registrar (se permite cualquier bloque del horario general)"}</p></div>`; }).join("");
+      M.$$("[data-tpedit]").forEach((b) => (b.onclick = M.wrapErr(async () => { const x = t.find((y) => y.id === b.dataset.tpedit);
+        M.perfil.editTeacher(x.id, x.full_name, { admin: true, onSaved: render }); })));
       M.$$("[data-save]").forEach((b) => (b.onclick = M.wrapErr(async () => {
         const v = M.$(`[data-meet="${b.dataset.save}"]`).value.trim();
         if (v && !/^https:\/\/meet\.google\.com\//.test(v)) throw new Error("El enlace debe empezar por https://meet.google.com/");
@@ -170,11 +176,15 @@
   async function addPackage(s) {
     const cat = await api.listPackages(), today = new Date().toISOString().slice(0, 10);
     M.modal(`<h2>Nuevo paquete · ${M.esc(s.full_name)}</h2>
-      <label>Paquete</label><select id="pc">${cat.map((p) => `<option value="${p.code}">${p.code} · ${p.classes} clases · US$${(+p.total_usd).toFixed(2)}</option>`).join("")}</select>
+      <label>Paquete</label><select id="pc">${cat.map((p) => `<option value="${p.code}">${M.esc(p.name)} · ${M.cop(p.price_cop)}</option>`).join("")}</select>
       <div class="row"><div><label>Fecha de compra</label><input id="pd" type="date" value="${today}"></div><div><label>Vence</label><input id="pe" type="date"></div></div>
+      <p class="muted small" id="pv"></p>
       <label>Estado de pago</label><select id="ps">${Object.entries(M.PAY_LABEL).map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select>
       <p class="muted small">La factura se emite en Zoho; aquí solo se registra el paquete y su estado.</p>
       <p><button class="btn" id="ok">Guardar</button> <button class="btn ghost" onclick="MEC.closeModal()">Cancelar</button></p>`, () => {
+      const vig = () => { const pk = cat.find((p) => p.code === M.$("#pc").value), e = M.packageExpiry(M.$("#pd").value, pk);
+        M.$("#pe").value = e || ""; M.$("#pv").textContent = pk ? `Vigencia ${pk.validity_months === 12 ? "1 año" : "6 meses"} (puedes ajustar la fecha).` : ""; };
+      M.$("#pc").onchange = vig; M.$("#pd").onchange = vig; vig();
       M.$("#ok").onclick = M.wrapErr(async () => {
         await api.addStudentPackage({ student_id: s.id, package_code: M.$("#pc").value, purchase_date: M.$("#pd").value, expiry_date: M.$("#pe").value || null, payment_status: M.$("#ps").value });
         M.closeModal(); M.toast("Paquete registrado"); render();

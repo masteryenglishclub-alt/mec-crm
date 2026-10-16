@@ -7,7 +7,7 @@
 
   /* ======================= MODO DEMO ======================= */
   function demoApi() {
-    const KEY = "mec_crm_demo_v3", SKEY = "mec_crm_demo_session";
+    const KEY = "mec_crm_demo_v4", SKEY = "mec_crm_demo_session";
     let db = JSON.parse(localStorage.getItem(KEY) || "null");
     const save = () => localStorage.setItem(KEY, JSON.stringify(db));
     function me() { const id = sessionStorage.getItem(SKEY); return db.profiles.find((p) => p.id === id) || null; }
@@ -141,13 +141,24 @@
         if (role() === "student") { const s = stu(me().id); const t = teach(s.teacher_id); return t ? [{ id: t.id, full_name: prof(t.id).full_name, meet_url: t.meet_url }] : []; }
         return db.teachers.filter((t) => role() === "admin" || t.id === me().id).map((t) => Object.assign({}, t, { full_name: prof(t.id).full_name }));
       },
-      async listPackages() { return db.packages; },
+      async listPackages() { return db.packages.filter((p) => p.active).sort((a, b) => a.sort_order - b.sort_order); },
       /* ---- Perfiles (migración 0900). Demo: sin BIO/estilo guardados -> la interfaz muestra estados vacíos. ---- */
       async getStudentProfile(sid) { const ok = visibleStudents().some((s) => s.id === sid); if (!ok) throw new Error("Permiso denegado"); return (db.student_profiles || {})[sid] || null; },
       async getInternalNote(sid) { need("admin", "teacher"); if (!visibleStudents().some((s) => s.id === sid)) return null; const n = db.notes && db.notes[sid]; return n ? { notes: n } : null; },
-      async listTeacherProfiles() { const cols = ["#2f7fe0", "#c0862a", "#3ccf8e"];
-        return db.teachers.map((t, i) => ({ teacher_id: t.id, display_name: prof(t.id).full_name, color: cols[i % 3], photo_url: null, role_title: "Teacher", bio: null,
-          experience: [], strengths: [], teaching_style: null, hobbies: [], topics: [], published: true })); },
+      async listTeacherProfiles() { const tp = db.teacher_profiles || {}; // demo: sin perfiles hasta que se editen (sin datos de ejemplo)
+        return Object.values(tp).filter((t) => t.published || t.teacher_id === me().id || role() === "admin").map((t) => Object.assign({}, t)); },
+      async getTeacherProfile(tid) { const t = (db.teacher_profiles || {})[tid]; return t && (t.published || tid === me().id || role() === "admin") ? Object.assign({}, t) : null; },
+      async saveTeacherProfile(tid, o) {
+        need("admin", "teacher"); if (role() === "teacher" && tid !== me().id) throw new Error("Permiso denegado");
+        db.teacher_profiles = db.teacher_profiles || {}; const old = db.teacher_profiles[tid] || { published: false };
+        if (role() !== "admin" && "published" in o && o.published !== old.published) throw new Error("Solo un admin puede publicar perfiles de teachers");
+        if (o.color && !/^#[0-9a-fA-F]{6}$/.test(o.color)) throw new Error("Color inválido");
+        db.teacher_profiles[tid] = Object.assign({}, old, o, { teacher_id: tid }); save(); },
+      async saveStudentProfile(sid, o) {
+        need("admin", "teacher"); if (!visibleStudents().some((s) => s.id === sid)) throw new Error("Permiso denegado");
+        const st = [o.style_visual, o.style_auditory, o.style_kinesthetic];
+        if (st.some((v) => v != null) && (st.some((v) => v == null) || st.reduce((a, b) => a + b, 0) !== 100)) throw new Error("El estilo de aprendizaje debe sumar 100");
+        db.student_profiles = db.student_profiles || {}; db.student_profiles[sid] = Object.assign({}, db.student_profiles[sid], o, { student_id: sid }); save(); },
       async listStudentPackages(sid) {
         const ok = visibleStudents().map((s) => s.id);
         return db.student_packages.filter((p) => ok.includes(p.student_id) && (!sid || p.student_id === sid)).map((p) => Object.assign({}, p, { classes_remaining: p.classes_total - p.classes_used, usable: usable(p) }));
@@ -289,8 +300,10 @@
       async assignTeacher(sid, tid) { need("admin"); stu(sid).teacher_id = tid || null; save(); },
       async addStudentPackage(o) {
         need("admin"); const pk = db.packages.find((p) => p.code === o.package_code);
-        db.student_packages.push({ id: "sp-" + Date.now(), student_id: o.student_id, package_code: pk.code, classes_total: pk.classes, classes_used: 0, amount_usd: pk.total_usd,
-          purchase_date: o.purchase_date, expiry_date: o.expiry_date || null, payment_status: o.payment_status, next_billing_date: null }); save();
+        if (!pk || !pk.active) throw new Error("El paquete está desactivado; usa uno del catálogo v3");
+        db.student_packages.push({ id: "sp-" + Date.now(), student_id: o.student_id, package_code: pk.code, classes_total: pk.classes, classes_used: 0, amount_cop: pk.price_cop,
+          personal_total: pk.personal_classes, group_total: pk.group_classes,
+          purchase_date: o.purchase_date, expiry_date: o.expiry_date || M.packageExpiry(o.purchase_date, pk), payment_status: o.payment_status, next_billing_date: null }); save();
       },
       async setPaymentStatus(pid, st) { need("admin"); db.student_packages.find((p) => p.id === pid).payment_status = st; save();
       },
@@ -364,7 +377,10 @@
         const ps = ts.length ? await q(c.from("profiles").select("id, full_name").in("id", ts.map((t) => t.id))) : [];
         return ts.map((t) => Object.assign(t, { full_name: (ps.find((p) => p.id === t.id) || {}).full_name, availability: (t.teacher_availability || []).map((a) => [a.weekday, a.start_hour, a.end_hour]) }));
       },
-      async listPackages() { const c = await client(); return q(c.from("packages").select("*").eq("active", true).order("code")); },
+      async listPackages() { const c = await client(); return q(c.from("packages").select("*").eq("active", true).order("sort_order")); },
+      async getTeacherProfile(tid) { const c = await client(); const r = await q(c.from("teacher_public_profiles").select("*").eq("teacher_id", tid)); return r[0] || null; },
+      async saveTeacherProfile(tid, o) { const c = await client(); await q(c.from("teacher_public_profiles").upsert(Object.assign({}, o, { teacher_id: tid }), { onConflict: "teacher_id" })); },
+      async saveStudentProfile(sid, o) { const c = await client(); await q(c.from("student_profiles").upsert(Object.assign({}, o, { student_id: sid }), { onConflict: "student_id" })); },
       async getStudentProfile(sid) { const c = await client(); const r = await q(c.from("student_profiles").select("*").eq("student_id", sid)); return r[0] || null; },
       async getInternalNote(sid) { const c = await client(); const r = await q(c.from("student_internal_notes").select("notes, interests, learning_style, updated_at").eq("student_id", sid)); return r[0] || null; },
       async listTeacherProfiles() { const c = await client(); return q(c.from("teacher_public_profiles").select("*").order("display_name")); },
@@ -436,7 +452,8 @@
       async assignTeacher(sid, tid) { const c = await client(); await q(c.from("students").update({ teacher_id: tid || null }).eq("id", sid)); },
       async addStudentPackage(o) {
         const c = await client(); const pk = await q(c.from("packages").select("*").eq("code", o.package_code).single());
-        await q(c.from("student_packages").insert({ student_id: o.student_id, package_code: pk.code, classes_total: pk.classes, amount_usd: pk.total_usd,
+        if (!pk.active) throw new Error("El paquete está desactivado; usa uno del catálogo v3");
+        await q(c.from("student_packages").insert({ student_id: o.student_id, package_code: pk.code, classes_total: pk.classes, // amount_cop, desglose y vencimiento: los completa la base (trigger)
           purchase_date: o.purchase_date, expiry_date: o.expiry_date || null, payment_status: o.payment_status }));
       },
       async setTeacherMeet(tid, url) { const c = await client(); await q(c.from("teachers").update({ meet_url: url }).eq("id", tid)); },

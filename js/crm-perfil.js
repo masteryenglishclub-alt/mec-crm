@@ -5,6 +5,7 @@
   const M = window.MEC, esc = M.esc;
   // Paquetes v3 (tabla oficial; COP). El Upgrade propone el siguiente del mismo tipo y lleva a precios.html.
   const V3 = { P: [["P1", 4], ["P2", 8], ["P3", 16], ["P4", 24]], G: [["G1", 8], ["G2", 16], ["G3", 24]], C: [["C1", 12, "4 personalizadas + 8 grupales"], ["C2", 20, "8 personalizadas + 12 grupales"], ["C3", 28, "12 personalizadas + 16 grupales"]] };
+  const NAME = { SP: "Clase personalizada suelta", SG: "Clase grupal suelta" };
   const TIPO = { P: "Personalizadas 1 a 1", G: "Grupales", C: "Combinado" }, ANCLA = { P: "personalizadas", G: "grupales", C: "combinados" };
   const card = (t, body, cls = "") => `<section class="sp-card ${cls}"><h2>${t}</h2>${body}</section>`;
   const lista = (a, vacio = "Por completar") => a && a.length ? `<ul>${a.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : `<p class="sp-pend">${vacio}</p>`;
@@ -26,13 +27,16 @@
     const arcs = ks.map((k, i) => { const l = (e[k] / 100) * C, s = `<circle cx="70" cy="70" r="50" fill="none" stroke="${cols[i]}" stroke-width="22" stroke-dasharray="${l} ${C - l}" stroke-dashoffset="${-off}" transform="rotate(-90 70 70)"/>`; off += l; return s; }).join("");
     return `<div class="sp-estilo"><svg viewBox="0 0 140 140" class="sp-donut" role="img" aria-label="Estilo de aprendizaje: ${ks.map((k) => k + " " + e[k] + "%").join(", ")}">${arcs}</svg><ul class="sp-ley">${ks.map((k, i) => `<li><i style="background:${cols[i]}"></i>${k} · ${e[k]}%</li>`).join("")}</ul></div>`;
   }
-  function upgrade(p) { // código v3 → siguiente del mismo tipo; código del catálogo antiguo → siguiente personalizado por nº de clases
-    const code = String(p.package_code || "").toUpperCase();
-    let t = code[0], arr = V3[t], i = arr ? arr.findIndex((x) => x[0] === code && x[1] === p.classes_total) : -1;
-    if (i < 0) { t = "P"; arr = V3.P; i = arr.reduce((b, x, j) => (x[1] <= p.classes_total ? j : b), -1); }
-    const sig = arr[i + 1];
-    return sig ? `<a class="sp-btn oro" href="precios.html#${ANCLA[t]}">Upgrade · Pasa a ${sig[0]} · ${sig[2] || sig[1] + " clases"}</a>` : `<p class="sp-small">Ya tienes el paquete más grande de este tipo. <a href="precios.html">Ver precios</a></p>`;
+  // Upgrade: siguiente paquete del MISMO tipo (P1→P2→P3→P4, G1→G2→G3, C1→C2→C3). En P4/G3/C3: sin botón.
+  // Paquetes antiguos (P1-USD…P6-USD) o sueltas: primer personalizado v3 con MÁS clases que el actual.
+  function upgrade(p) {
+    const code = String(p.package_code || "").toUpperCase(), t = code[0], arr = /^[PGC]\d$/.test(code) ? V3[t] : null;
+    let sig, tt = t;
+    if (arr && arr.some((x) => x[0] === code)) sig = arr[arr.findIndex((x) => x[0] === code) + 1];
+    else { tt = "P"; sig = V3.P.find((x) => x[1] > (p.classes_total || 0)); }
+    return sig ? `<a class="sp-btn oro" href="precios.html#${ANCLA[tt]}">Upgrade · Pasa a ${sig[0]} · ${sig[2] ? sig[2] : sig[1] + " clases"}</a>` : `<p class="sp-small">Ya tienes el paquete más grande. <a href="precios.html">Ver precios</a></p>`;
   }
+
 
   /* ctx = { s: estudiante (listStudents), pkgs, classes, prof: student_profiles|null, note: (solo staff) objeto|null|undefined, agendar: href|null, self: bool } */
   function misClases(ctx) {
@@ -49,7 +53,8 @@
     else {
       const tot = p.classes_total, used = p.classes_used, quedan = p.classes_remaining ?? tot - used, code = String(p.package_code || "").toUpperCase();
       const vence = p.expiry_date || addMeses(p.purchase_date, tot > 20 ? 12 : 6);
-      paq = `<p class="sp-paq"><strong>${esc(code || "Paquete")}</strong>${TIPO[code[0]] && V3[code[0]].some((x) => x[0] === code && x[1] === tot) ? " · " + TIPO[code[0]] : ""} · ${tot} clases${p.payment_status === "pending" ? ' <span class="sp-tag">Pago pendiente</span>' : ""}</p>
+      const v3 = /^[PGC]\d$/.test(code) && V3[code[0]].find((x) => x[0] === code);
+      paq = `<p class="sp-paq"><strong>${esc(NAME[code] || code || "Paquete")}</strong>${v3 ? " · " + TIPO[code[0]] + " · " + (v3[2] || tot + " clases") : ` · ${tot} clase${tot === 1 ? "" : "s"}`}${code.endsWith("-USD") ? " (catálogo anterior)" : ""}${p.payment_status === "pending" ? ' <span class="sp-tag">Pago pendiente</span>' : ""}</p>
         <div class="sp-cont"><div><b>${tot}</b><small>compradas</small></div><div><b>${used}</b><small>tomadas</small></div><div><b>${quedan}</b><small>${ctx.self ? "te quedan" : "quedan"}</small></div></div>
         <div class="sp-barra" role="progressbar" aria-valuemin="0" aria-valuemax="${tot}" aria-valuenow="${used}" aria-label="Clases tomadas"><i style="width:${tot ? (used / tot) * 100 : 0}%"></i></div>
         <p class="sp-small">Comprado el ${M.fmtDate(p.purchase_date)} · <strong>Vence el ${M.fmtDate(vence)}</strong> (${tot > 20 ? "1 año: más de 20 clases" : "6 meses: 20 clases o menos"})</p>${ctx.self ? upgrade(p) : ""}`;
@@ -116,13 +121,83 @@
       const s = st.find((x) => x.id === id); if (!s) return;
       const v = $("#pf-perfil"); $("#pf-lista").hidden = true; v.hidden = false; v.innerHTML = '<p class="muted">Cargando…</p>';
       const [pkgs, classes, prof, note] = await Promise.all([api.listStudentPackages(id), api.listClasses({ studentId: id }), api.getStudentProfile(id), api.getInternalNote(id)]);
-      v.innerHTML = `<p><button type="button" class="sp-btn" id="pf-volver">‹ Volver a la lista</button></p><h2 class="st-nombre" tabindex="-1">${esc(s.full_name || "—")}</h2>` + misClases({ s, pkgs, classes, prof, note: note || null, self: false });
+      v.innerHTML = `<p><button type="button" class="sp-btn" id="pf-volver">‹ Volver a la lista</button> <button type="button" class="sp-btn oro" id="pf-editar">Editar</button></p><h2 class="st-nombre" tabindex="-1">${esc(s.full_name || "—")}</h2>` + misClases({ s, pkgs, classes, prof, note: note || null, self: false });
       v.querySelector(".st-nombre").focus();
+      $("#pf-editar").onclick = () => editStudent(s, prof, classes, () => open(id));
       $("#pf-volver").onclick = () => { v.hidden = true; $("#pf-lista").hidden = false; const b = root.querySelector(`[data-pf="${id}"]`); if (b) b.focus(); };
     });
     ["#pf-q", "#pf-niv", "#pf-prof"].forEach((s) => { const el = $(s); if (el) el.addEventListener("input", draw); });
     $("#pf-grid").addEventListener("click", (e) => { const b = e.target.closest("[data-pf]"); if (b) open(b.dataset.pf); });
     draw();
   }
-  M.perfil = { misClases, teachersView, studentsBrowser, bindTest };
+
+  /* ---------- Edición (staff). La seguridad real está en RLS: el teacher solo guarda en sus estudiantes/clases. ---------- */
+  const lines = (v) => v.split("\n").map((x) => x.trim()).filter(Boolean);
+  const ta = (id, label, arr, help) => `<label for="${id}">${label}</label><textarea id="${id}" rows="3" aria-describedby="${id}-h">${esc((arr || []).join("\n"))}</textarea><p class="muted small" id="${id}-h">${help || "Una por línea."}</p>`;
+  async function editStudent(s, prof, classes, done) {
+    const me = await M.api.currentUser(), pr = prof || {};
+    const fbCls = classes.filter((c) => c.status === "completed" && (me.role === "admin" || c.teacher_id === me.id)).sort((a, b) => b.starts_at.localeCompare(a.starts_at));
+    M.modal(`<h2>Editar · ${esc(s.full_name || "")}</h2>
+      <fieldset class="pf-fs"><legend>BIO</legend>
+        <label for="e-st">Estado</label><select id="e-st"><option value="en_construccion">En construcción</option><option value="completa" ${pr.bio_status === "completa" ? "selected" : ""}>Completa</option></select>
+        ${ta("e-go", "Metas", pr.goals)}${ta("e-li", "Gustos", pr.likes)}${ta("e-pe", "Personalidad", pr.personality)}</fieldset>
+      <fieldset class="pf-fs"><legend>Estilo de aprendizaje (suma 100)</legend><div class="row">
+        <div><label for="e-v">Visual</label><input id="e-v" type="number" min="0" max="100" value="${pr.style_visual ?? ""}"></div>
+        <div><label for="e-a">Auditivo</label><input id="e-a" type="number" min="0" max="100" value="${pr.style_auditory ?? ""}"></div>
+        <div><label for="e-k">Kinestésico</label><input id="e-k" type="number" min="0" max="100" value="${pr.style_kinesthetic ?? ""}"></div></div>
+        <p class="small" id="e-sum" aria-live="polite"></p><p class="muted small">Déjalos los tres vacíos si aún no lo conoces.</p></fieldset>
+      <p><button class="btn" id="e-ok">Guardar BIO y estilo</button> <button class="btn ghost" onclick="MEC.closeModal()">Cerrar</button></p>
+      <fieldset class="pf-fs"><legend>Feedback por clase</legend>${fbCls.length ? fbCls.slice(0, 20).map((c) => `<div class="cls"><div><b>${esc(c.title || "")}</b><br><span class="muted small">${M.fmtDateTime(c.starts_at)}${c.teacher_note || c.sentences ? " · con feedback" : " · sin feedback"}</span></div>
+        <div><button class="btn ghost sm" data-efb="${c.id}">${c.teacher_note || c.sentences ? "Editar" : "Escribir"} feedback</button></div></div>`).join("") : '<p class="muted">Aún no hay clases completadas para dar feedback.</p>'}</fieldset>`, () => {
+      const num = (id) => { const v = M.$(id).value.trim(); return v === "" ? null : Math.round(+v); };
+      const sum = () => { const a = ["#e-v", "#e-a", "#e-k"].map(num); M.$("#e-sum").textContent = a.every((x) => x == null) ? "Sin estilo registrado." : `Suma: ${a.reduce((x, y) => x + (y || 0), 0)} de 100`; };
+      ["#e-v", "#e-a", "#e-k"].forEach((i) => M.$(i).addEventListener("input", sum)); sum();
+      M.$("#e-ok").onclick = M.wrapErr(async () => {
+        const v = num("#e-v"), a = num("#e-a"), k = num("#e-k"), arr = [v, a, k];
+        if (arr.some((x) => x != null) && (arr.some((x) => x == null || x < 0 || x > 100) || v + a + k !== 100)) throw new Error("El estilo de aprendizaje debe sumar 100 (o dejar los tres vacíos)");
+        await M.api.saveStudentProfile(s.id, { bio_status: M.$("#e-st").value, goals: lines(M.$("#e-go").value), likes: lines(M.$("#e-li").value), personality: lines(M.$("#e-pe").value),
+          style_visual: v, style_auditory: a, style_kinesthetic: k });
+        M.closeModal(); M.toast("Perfil guardado"); done(); });
+      M.$$("[data-efb]").forEach((b) => (b.onclick = () => editFeedback(fbCls.find((c) => c.id === b.dataset.efb), done)));
+    });
+  }
+  function editFeedback(c, done) {
+    const s = c.sentences || [];
+    M.modal(`<h2>Feedback · ${esc(c.title || "")}</h2><p class="muted small">${M.fmtDateTime(c.starts_at)} · <b>visible para el estudiante</b></p>
+      <label for="f-n">Nota del teacher</label><textarea id="f-n" rows="3">${esc(c.teacher_note || "")}</textarea>
+      <label>My sentences today (3 a 5 frases)</label><div id="f-s">${[0, 1, 2, 3, 4].map((i) => `<input style="margin-bottom:6px" aria-label="Frase ${i + 1}" placeholder="Frase ${i + 1}${i > 2 ? " (opcional)" : ""}" value="${esc(s[i] || "")}">`).join("")}</div>
+      <p><button class="btn" id="f-ok">Guardar</button> <button class="btn ghost" onclick="MEC.closeModal()">Cancelar</button></p>`, () => {
+      M.$("#f-ok").onclick = M.wrapErr(async () => { const arr = M.$$("#f-s input").map((i) => i.value.trim()).filter(Boolean);
+        if (arr.length < 3) throw new Error("Escribe al menos 3 frases");
+        await M.api.saveFeedback(c.id, M.$("#f-n").value.trim(), arr); M.closeModal(); M.toast("Feedback guardado"); done(); });
+    });
+  }
+  /* Formulario del perfil público del teacher (teacher: el suyo; admin: todos + «published») */
+  async function teacherForm(root, tid, fullName, opts) {
+    const t = (await M.api.getTeacherProfile(tid)) || { display_name: fullName, color: "#2f7fe0", published: false };
+    root.innerHTML = `<form class="panel" id="tp-f" novalidate><div class="row">
+        <div><label for="t-n">Nombre visible</label><input id="t-n" required value="${esc(t.display_name || fullName || "")}"></div>
+        <div><label for="t-r">Cargo</label><input id="t-r" value="${esc(t.role_title || "")}" placeholder="Teacher"></div>
+        <div style="flex:0 0 120px"><label for="t-c">Color</label><input id="t-c" type="color" value="${/^#[0-9a-fA-F]{6}$/.test(t.color) ? t.color : "#2f7fe0"}"></div></div>
+      <label for="t-p">Foto (URL https:// o ruta img/…)</label><input id="t-p" value="${esc(t.photo_url || "")}">
+      <label for="t-b">BIO</label><textarea id="t-b" rows="3">${esc(t.bio || "")}</textarea>
+      ${ta("t-ex", "Experiencia", t.experience)}${ta("t-fo", "Fortalezas", t.strengths)}
+      <label for="t-s">Estilo de enseñanza preferido</label><select id="t-s"><option value="">Por completar</option>${[["visual", "Visual"], ["auditivo", "Auditivo"], ["kinestesico", "Kinestésico"]].map(([k, n]) => `<option value="${k}" ${t.teaching_style === k ? "selected" : ""}>${n}</option>`).join("")}</select>
+      ${ta("t-ho", "Hobbies y gustos", t.hobbies)}${ta("t-to", "Temas de interés", t.topics)}
+      ${opts.admin ? `<label class="pf-check"><input type="checkbox" id="t-pub" ${t.published ? "checked" : ""}> Publicado (visible para los estudiantes en «Teachers»)</label>`
+        : `<p class="small">Estado: ${t.published ? "<b>Publicado</b>" : "<b>Sin publicar</b>: el admin decide cuándo se publica."}</p>`}
+      <p><button class="btn" type="submit">Guardar perfil</button>${opts.modal ? ' <button type="button" class="btn ghost" onclick="MEC.closeModal()">Cerrar</button>' : ""}</p></form>`;
+    root.querySelector("#tp-f").onsubmit = M.wrapErr(async (e) => { e.preventDefault();
+      const g = (i) => root.querySelector(i), photo = g("#t-p").value.trim();
+      if (!g("#t-n").value.trim()) throw new Error("Escribe el nombre visible");
+      if (photo && !/^(https:\/\/|img\/)/.test(photo)) throw new Error("La foto debe ser una URL https:// o una ruta img/…");
+      const o = { display_name: g("#t-n").value.trim(), role_title: g("#t-r").value.trim() || null, color: g("#t-c").value, photo_url: photo || null, bio: g("#t-b").value.trim() || null,
+        experience: lines(g("#t-ex").value), strengths: lines(g("#t-fo").value), teaching_style: g("#t-s").value || null, hobbies: lines(g("#t-ho").value), topics: lines(g("#t-to").value) };
+      if (opts.admin) o.published = g("#t-pub").checked;
+      await M.api.saveTeacherProfile(tid, o); M.toast("Perfil guardado"); if (opts.onSaved) { M.closeModal(); opts.onSaved(); } });
+  }
+  function editTeacher(tid, name, opts) {
+    M.modal(`<h2>Perfil público · ${esc(name)}</h2><div id="tp-m"></div>`, () => teacherForm(M.$("#tp-m"), tid, name, Object.assign({ modal: true }, opts)));
+  }
+  M.perfil = { misClases, teachersView, studentsBrowser, bindTest, editStudent, teacherForm, editTeacher };
 })();
