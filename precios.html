@@ -1,20 +1,34 @@
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Precios · Mastery English Club</title><meta name="description" content="Paquetes de clases personalizadas, grupales y combinadas con descuentos de hasta 40 %.">
+<title>Precios · Mastery English Club</title><meta name="description" content="Paquetes de clases personalizadas, grupales y combinadas con descuentos de hasta 30 %.">
 <link rel="icon" href="img/favicon.ico"><link rel="apple-touch-icon" href="img/apple-touch-icon-180.png">
 <link rel="stylesheet" href="css/crm.css"><link rel="stylesheet" href="css/web.css"></head>
-<body class="web"><nav id="site-nav" aria-label="Principal"></nav>
-<header class="page-head"><div class="wrap"><span class="kicker">Precios</span><h1>Paquetes con hasta 40 % de descuento</h1>
-<p class="lead muted">Entre más clases, más ahorras. Precios por estudiante.</p>
-<div class="tabs-precio"><a class="btn ghost" href="#personalizadas">Personalizadas</a><a class="btn ghost" href="#grupales">Grupales</a><a class="btn ghost" href="#combinados">Combinados</a></div></div></header>
-<section class="sec" id="personalizadas"><div class="wrap"><h2>Clases personalizadas 1 a 1</h2>
-<p class="muted">Clases individuales con tu teacher, a tu ritmo.</p><div class="precios" id="p-pers"></div><p class="suelta" id="s-pers"></p></div></section>
-<section class="sec" id="grupales"><div class="wrap"><h2>Clases grupales</h2>
-<p class="muted">Grupos de máximo 4 estudiantes en horarios fijos. El grupo abre con mínimo 2 estudiantes.</p><div class="precios" id="p-grup"></div><p class="suelta" id="s-grup"></p></div></section>
-<section class="sec" id="combinados"><div class="wrap"><h2>Paquetes combinados</h2>
-<p class="muted">Lo mejor de los dos formatos: clases personalizadas y grupales en un solo paquete. Las clases grupales requieren mínimo 2 estudiantes por grupo.</p><div class="precios" id="p-comb"></div>
-<p class="cta-row"><a class="btn lg red" data-wa href="#">Agenda tu clase</a></p>
-<p class="nota" id="nota"></p></div></section>
+<body class="web precios-p"><nav id="site-nav" aria-label="Principal"></nav>
+<main class="precios-v3">
+  <picture class="hero-bg precios-bg">
+    <source media="(max-width: 700px)" srcset="img/web/hero-precios-mobile.webp" type="image/webp">
+    <source srcset="img/web/hero-precios-800.webp 800w, img/web/hero-precios-1280.webp 1280w, img/web/hero-precios-1536.webp 1536w" sizes="100vw" type="image/webp">
+    <img src="img/web/hero-precios-1280.jpg" width="1536" height="978" alt="Mercado vikingo al atardecer: un lobo con casco carga una pila de libros junto al puerto" fetchpriority="high" decoding="async">
+  </picture>
+  <header class="precios-hero"><div class="ph-text"><span class="kicker">Invierte en tu futuro</span>
+    <h1>Paquetes con hasta 30% de descuento</h1>
+    <p class="lead">Elige el plan que mejor se adapte a ti y accede a todo el material, la metodología y los beneficios de MEC.</p>
+    <ul class="ph-feats"><li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11.5" fill="rgba(7,12,22,.8)" stroke="#d9a84a"/><path d="M6 7h5v10H6zM13 7h5v10h-5z" fill="none" stroke="#f0c46a" stroke-width="1.3"/></svg><span>Libros físicos y digitales</span></li><li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11.5" fill="rgba(7,12,22,.8)" stroke="#d9a84a"/><circle cx="12" cy="12" r="4" fill="none" stroke="#f0c46a" stroke-width="1.3"/><path d="M12 5v3M12 16v3M5 12h3M16 12h3" stroke="#f0c46a" stroke-width="1.3"/></svg><span>Actividades y proyectos</span></li><li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11.5" fill="rgba(7,12,22,.8)" stroke="#d9a84a"/><path d="M5 7h14v8H5zM9 18h6M12 15v3" fill="none" stroke="#f0c46a" stroke-width="1.3"/></svg><span>Acceso a la plataforma</span></li><li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11.5" fill="rgba(7,12,22,.8)" stroke="#d9a84a"/><circle cx="12" cy="9" r="3" fill="none" stroke="#f0c46a" stroke-width="1.3"/><path d="M6 18c1-3 3.5-4.5 6-4.5s5 1.5 6 4.5" fill="none" stroke="#f0c46a" stroke-width="1.3"/></svg><span>Soporte personalizado</span></li></ul></div>
+    <button type="button" class="aprende" id="abrir-politicas" aria-haspopup="dialog" aria-controls="politicas">Aprende más sobre nuestros paquetes <span aria-hidden="true">→</span></button>
+  </header>
+  <div class="pgrid">
+    <section class="ppanel" id="personalizadas" aria-labelledby="t-pers"><h2 id="t-pers">Clases personalizadas 1 a 1</h2><p class="psub">Tu ritmo. Tu objetivo. Tu clase.</p>
+      <div class="pcards" id="p-pers"></div><p class="suelta2" id="s-pers"></p></section>
+    <section class="ppanel" id="grupales" aria-labelledby="t-grup"><h2 id="t-grup">Clases grupales</h2><p class="psub">Aprende en equipo, avanza más. Grupos de 2 a 4 estudiantes.</p>
+      <div class="pcards" id="p-grup"></div><p class="suelta2" id="s-grup"></p></section>
+    <section class="ppanel ancho" id="combinados" aria-labelledby="t-comb"><h2 id="t-comb">Paquetes combinados</h2><p class="psub">Más clases, más progreso, más valor.</p>
+      <div class="pcards" id="p-comb"></div></section>
+  </div>
+  <p class="cta-row pcta"><a class="btn lg red" data-wa href="#">Elige tu plan y comienza hoy <span aria-hidden="true">→</span></a></p>
+  <p class="nota wrap" id="nota"></p>
+  <dialog id="politicas" aria-labelledby="pol-t"><h2 id="pol-t">Políticas de uso de los paquetes</h2><ul><li>Las clases se solicitan en los espacios libres del calendario de cada profesor.</li><li>Cancelación gratis hasta 12 h antes (la noche anterior).</li><li>2 pases libres; después, las inasistencias o cancelaciones tardías se descuentan.</li><li>Los paquetes con pago pendiente no se pueden usar.</li><li>Vigencia: paquetes de 20 clases o menos, 6 meses; de más de 20 clases, 1 año.</li><li>Los grupos requieren mínimo 2 estudiantes y máximo 4.</li><li>Clases CLUB gratis los fines de semana para inscritos (hasta 10).</li><li>Precios por estudiante en COP.</li><li>Pagos por Nequi/Daviplata, PayPal o Western Union.</li></ul>
+    <button type="button" class="btn" data-cerrar>Cerrar</button></dialog>
+</main>
 <footer class="site"><div class="wrap"><p class="rune-div" aria-hidden="true">ᛗ ᛖ ᚲ</p>
 <p>© <span id="year"></span> Mastery English Club · Instituto virtual de inglés · <a href="contacto.html">Contáctanos</a> · <a href="login.html">Ingresar</a></p></div></footer>
 <script src="js/web/data.js"></script><script src="js/web/precios.js"></script><script src="js/web/precios-page.js"></script><script src="js/web/site.js"></script></body></html>

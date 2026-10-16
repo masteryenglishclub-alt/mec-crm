@@ -3,8 +3,34 @@
 <title>Metodología y material · Mastery English Club</title><meta name="description" content="Cómo son las clases, niveles A1 a C1, ciclo de 6 clases y material de apoyo.">
 <link rel="icon" href="img/favicon.ico"><link rel="apple-touch-icon" href="img/apple-touch-icon-180.png">
 <link rel="stylesheet" href="css/crm.css"><link rel="stylesheet" href="css/web.css"></head>
-<body class="web"><nav id="site-nav" aria-label="Principal"></nav>
-<header class="page-head"><div class="wrap"><span class="kicker">Metodología y material</span><h1>Hablar es la meta</h1></div></header>
+<body class="web meto"><nav id="site-nav" aria-label="Principal"></nav>
+<header class="hero meto-hero">
+  <picture class="hero-bg">
+    <source media="(max-width: 700px)" srcset="img/web/hero-metodologia-mobile.webp" type="image/webp">
+    <source srcset="img/web/hero-metodologia-800.webp 800w, img/web/hero-metodologia-1280.webp 1280w, img/web/hero-metodologia-1756.webp 1756w" sizes="100vw" type="image/webp">
+    <img src="img/web/hero-metodologia-1280.jpg" width="1964" height="755" alt="Puerto vikingo al atardecer: un drakkar atracado y vikingos cargando cajas en el muelle" fetchpriority="high" decoding="async">
+  </picture>
+  <div class="wrap meto-col">
+    <div class="meto-intro"><span class="nivel-tag">Niveles A1 a C1 · Adultos</span>
+      <h1>Hablar es la meta</h1>
+      <p class="lead">En MEC, la metodología se centra en la comunicación real. Con conversación, situaciones del trabajo y la vida diaria y proyectos, estudiantes adultos y profesionales desarrollan su inglés de forma natural y práctica.</p>
+      <ul class="meto-items"><li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11.5" fill="none" stroke="#d9a84a"/><path d="M5 7h9v6H9l-3 2.5V13H5zM15 10h4v6h-1v2l-2.5-2H12v-1.5" fill="none" stroke="#f0c46a" stroke-width="1.4" stroke-linejoin="round"/></svg><div><strong>Conversación real</strong><span>Hablas desde el primer día.</span></div></li><li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11.5" fill="none" stroke="#d9a84a"/><path d="M6 6h5a2 2 0 0 1 1 1v11a2 2 0 0 0-1-1H6zM18 6h-5a2 2 0 0 0-1 1v11a2 2 0 0 1 1-1h5z" fill="none" stroke="#f0c46a" stroke-width="1.4"/></svg><div><strong>Material exclusivo</strong><span>Libros y ejercicios propios por nivel.</span></div></li><li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11.5" fill="none" stroke="#d9a84a"/><path d="M5 9h14v9H5zM9 9V7h6v2" fill="none" stroke="#f0c46a" stroke-width="1.4"/></svg><div><strong>Situaciones reales y proyectos</strong><span>Trabajo, viajes y vida diaria.</span></div></li><li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11.5" fill="none" stroke="#d9a84a"/><path d="M5 18V6M5 18h14M8 15l3-4 3 2 4-6" fill="none" stroke="#f0c46a" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg><div><strong>Seguimiento personalizado</strong><span>Feedback y progreso mensual.</span></div></li></ul>
+      <p><a class="btn lg oro" href="#material-apoyo">Ver material de apoyo <span aria-hidden="true">→</span></a></p>
+    </div>
+    <section class="meto-panel" id="material-apoyo" aria-labelledby="mat-t"><h2 id="mat-t">Material de apoyo · A1</h2>
+      <!-- Los PDF no se publican: placeholder "Disponible pronto" (en el futuro, tras el ingreso de estudiantes) -->
+      <div class="meto-libros">
+        <article class="meto-libro"><img src="img/web/portada-students-book-a1.webp" width="360" height="509" alt="Portada del Student's Book A1" loading="lazy"><div><h3>Student Book A1</h3><p>Libro principal con vocabulario, gramática y actividades de conversación.</p><span class="btn sm ghost pronto" aria-disabled="true">⬇ Descargar PDF · Disponible pronto</span></div></article>
+        <article class="meto-libro"><img src="img/web/portada-practice-book-a1.webp" width="360" height="509" alt="Portada del Practice Book A1" loading="lazy"><div><h3>Practice Book A1</h3><p>Ejercicios para practicar fuera de clase y reforzar lo aprendido.</p><span class="btn sm ghost pronto" aria-disabled="true">⬇ Descargar PDF · Disponible pronto</span></div></article>
+      </div>
+    </section>
+    <section class="meto-panel" id="casos-exito" aria-labelledby="casos-t"><h2 id="casos-t">Casos de éxito</h2>
+      <!-- PLACEHOLDER: testimonios de EJEMPLO inventados (datos en js/web/data.js) -->
+      <div class="meto-casos" id="casos" data-placeholder="true"></div>
+      <p><a class="btn sm red" href="contacto.html">Dejar una reseña</a></p>
+    </section>
+  </div>
+</header>
 <!-- Textos de Sigrid (web_textos_publicos.md §2) · BORRADOR pendiente de aprobación; solo formato, sin cambios de redacción -->
 <section class="sec"><div class="wrap prose" data-draft="sigrid">
 <p>En MEC creemos que el inglés se aprende usándolo. Por eso cada clase está pensada para que hables mucho: entre más hablas, más practicas, y cada error se convierte en una oportunidad de mejorar. Nuestro objetivo principal es que ganes confianza y pierdas el miedo a comunicarte.</p>
@@ -33,25 +59,9 @@
 <!-- PENDIENTE de confirmación de Lobo: "libro y guía por nivel". Quitar este bloque si no se confirma. -->
 <div data-pending="libro-guia-por-nivel"><h3>Material</h3>
 <p>Cada nivel cuenta con su libro y su guía de ejercicios, alineados con las clases, para practicar dentro y fuera del aula.</p></div>
-<!-- PENDIENTE de confirmación de Lobo: mención del Programa Kids. Quitar este bloque si no se confirma. -->
-<div data-pending="programa-kids"><h3>Programa Kids</h3>
-<p>También tenemos un programa para niños de 6 a 12 años, con la misma estructura, clases lúdicas, canciones, juegos y misiones para que los más pequeños hablen inglés con confianza.</p><p><a href="kids.html">Conoce Mastery4Kids →</a></p></div>
 </div></section>
 
-<section class="sec"><div class="wrap"><h2>Material de apoyo · A1</h2>
-<!-- Los PDF no se publican: en el futuro estarán disponibles tras el ingreso de estudiantes -->
-<div class="grid2" style="align-items:start">
-  <article class="card libro"><img src="img/web/portada-students-book-a1.webp" width="360" height="509" alt="Portada del Student's Book A1" loading="lazy">
-    <div><h3 style="font-family:var(--display)">Student's Book A1</h3><p class="muted">El libro de clase del nivel A1: vocabulario, gramática y actividades de conversación para cada subnivel.</p><p class="small muted">Disponible para estudiantes.</p></div></article>
-  <article class="card libro"><img src="img/web/portada-practice-book-a1.webp" width="360" height="509" alt="Portada del Practice Book A1" loading="lazy">
-    <div><h3 style="font-family:var(--display)">Practice Book A1</h3><p class="muted">La guía de ejercicios para practicar fuera de clase y reforzar lo aprendido.</p><p class="small muted">Disponible para estudiantes.</p></div></article>
-</div></div></section>
-
-<section class="sec" id="casos-exito"><div class="wrap"><h2>Casos de éxito</h2>
-  <!-- PLACEHOLDER: testimonios de EJEMPLO inventados (datos en js/web/data.js) -->
-  <div class="grid3" id="casos" data-placeholder="true"></div>
-  <p class="cta-row"><a class="btn lg red" data-wa href="#">Agenda tu clase</a></p>
-</div></section>
+<section class="sec"><div class="wrap"><p class="cta-row"><a class="btn lg red" data-wa href="#">Agenda tu clase</a></p></div></section>
 <footer class="site"><div class="wrap"><p class="rune-div" aria-hidden="true">ᛗ ᛖ ᚲ</p>
 <p>© <span id="year"></span> Mastery English Club · Instituto virtual de inglés · <a href="contacto.html">Contáctanos</a> · <a href="login.html">Ingresar</a></p></div></footer>
 <script src="js/web/data.js"></script><script src="js/web/site.js"></script></body></html>

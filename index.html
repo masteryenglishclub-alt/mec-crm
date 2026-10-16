@@ -5,13 +5,19 @@
 <script>/* Enlaces de Supabase (Site URL = raíz): reenvía hash/query de auth intactos a login.html */
 (function(){var s=location.search,h=location.hash;if(/(access_token|refresh_token|error_code|error=|type=|code=)/.test(s+h))location.replace("login.html"+s+h);})();</script>
 <link rel="stylesheet" href="css/crm.css"><link rel="stylesheet" href="css/web.css"></head>
-<body class="web"><nav id="site-nav" aria-label="Principal"></nav>
-<header class="hero"><div class="wrap hero-grid">
-  <div><span class="kicker">Instituto virtual · Alcance global</span>
-    <h1>Mastery English Club</h1>
+<body class="web home"><nav id="site-nav" aria-label="Principal"></nav>
+<header class="hero hero-fiordo">
+  <picture class="hero-bg">
+    <source media="(max-width: 700px)" srcset="img/web/hero-fiordo-mobile.webp" type="image/webp">
+    <source srcset="img/web/hero-fiordo-800.webp 800w, img/web/hero-fiordo-1280.webp 1280w, img/web/hero-fiordo-1756.webp 1756w" sizes="100vw" type="image/webp">
+    <img src="img/web/hero-fiordo-1280.jpg" width="1756" height="836" alt="" fetchpriority="high" decoding="async">
+  </picture>
+  <div class="wrap hero-grid">
+  <div class="hero-text"><span class="kicker">Instituto virtual · Alcance global</span>
+    <h1>Mastery<br>English Club</h1>
     <p class="lead">Clases de inglés virtuales 1 a 1, desde cualquier lugar del mundo, para que ganes confianza y hables desde la primera clase.</p>
     <div class="cta-row"><a class="btn lg red" data-wa href="#">Agenda tu clase</a><a class="btn lg ghost" href="metodologia.html">Conoce la metodología</a></div></div>
-  <img class="mascota" src="img/web/mascota-adulto-560.webp" width="560" height="703" alt="Mascota de Mastery English Club: un lobo husky vikingo">
+  <span class="sr-only">Ilustración: lobo vikingo, mascota de Mastery English Club, frente a un fiordo nórdico al atardecer</span>
 </div></header>
 
 <section class="sec" id="sobre"><div class="wrap grid2">
