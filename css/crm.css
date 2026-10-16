@@ -6,7 +6,7 @@
 *{box-sizing:border-box}
 body{margin:0;font:400 15px/1.55 var(--body);color:var(--text);background:var(--bg);min-height:100vh;
  background-image:radial-gradient(1200px 600px at 80% -10%,rgba(47,92,158,.16),transparent 60%),radial-gradient(900px 500px at -10% 110%,rgba(142,43,48,.12),transparent 60%)}
-body::before{content:"ᛗ ᛖ ᚲ ᚨ ᛊ ᛏ ᛖ ᚱ ᛃ";position:fixed;right:-40px;bottom:30px;font:400 64px/1 serif;letter-spacing:.35em;color:rgba(255,255,255,.025);writing-mode:vertical-rl;pointer-events:none;z-index:0}
+
 a{color:var(--blue);text-decoration:none}a:hover{text-decoration:underline}
 h1,h2,h3{margin:0 0 .6em;line-height:1.2}
 h1{font:800 1.9rem var(--display);letter-spacing:.03em}
@@ -27,7 +27,7 @@ nav.tabs button.on,nav.tabs button:hover{color:var(--text);border-bottom-color:v
 .demo-badge{background:rgba(231,176,74,.12);color:var(--warn);border:1px solid rgba(231,176,74,.4);border-radius:20px;padding:2px 10px;font:700 .66rem var(--body);letter-spacing:.12em}
 main{padding:26px 0 60px}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:18px;position:relative}
-.panel.rune::after{content:"ᛗᛖᚲ";position:absolute;top:12px;right:16px;color:rgba(255,255,255,.06);font-size:1.1rem;letter-spacing:.3em}
+
 .grid{display:grid;gap:16px}.g2{grid-template-columns:repeat(2,minmax(0,1fr))}.g3{grid-template-columns:repeat(3,minmax(0,1fr))}.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
 @media(max-width:900px){.g3,.g4{grid-template-columns:repeat(2,minmax(0,1fr))}.g2{grid-template-columns:1fr}}
 @media(max-width:560px){.g3,.g4{grid-template-columns:1fr}h1{font-size:1.45rem}nav.tabs{margin-left:0;width:100%;overflow-x:auto;flex-wrap:nowrap}.who{width:100%}}

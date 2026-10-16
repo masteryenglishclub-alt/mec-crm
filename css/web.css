@@ -79,7 +79,7 @@ footer.site{border-top:1px solid var(--line);padding:30px 0;color:var(--dim);fon
 .page-head{padding-bottom:50px}
 section.sec h2{position:relative;padding-bottom:26px}
 section.sec h2::after{content:"";position:absolute;left:0;bottom:0;width:240px;max-width:80%;height:30px;background:url(../img/web/orn/divisor.svg) left center/contain no-repeat}
-.rune-div{font-size:0;height:26px;background:url(../img/web/orn/runas.svg) center/auto 22px no-repeat;opacity:.45;margin:0 0 18px}
+.rune-div{font-size:0;height:26px;background:url(../img/web/orn/divisor.svg) center/auto 22px no-repeat;opacity:.45;margin:0 0 18px}
 .card{position:relative}
 .card::before,.card::after{content:"";position:absolute;width:30px;height:30px;background:url(../img/web/orn/esquina.svg) center/contain no-repeat;pointer-events:none;opacity:.95}
 .card::before{top:-6px;left:-6px}.card::after{bottom:-6px;right:-6px;transform:rotate(180deg)}

@@ -59,7 +59,47 @@
 .sol-acc{white-space:nowrap}.sol-acc .sp-btn{padding:6px 10px;margin-left:6px}.sol-ok{background:#1f7a48}.sol-no{background:#8e2b30}
 @media (max-width:760px){.sol-tabla thead{display:none}.sol-tabla,.sol-tabla tbody,.sol-tabla tr,.sol-tabla td{display:block;width:100%}
  .sol-tabla tr{margin-bottom:12px;border-left:6px solid var(--c);border-radius:8px;overflow:hidden;background:rgba(10,20,34,.93);border-top:1px solid #c9a15e55}
- .sol-tabla td{border:0!important;border-radius:0!important;padding:6px 12px;background:none;display:flex;justify-content:space-between;gap:10px}
+ .sol-tabla td{border:0!important;border-radius:0!important;padding:6px 12px;background:none;display:flex;justify-content:space-between;gap:10px}}
 .pf-sec{margin-top:18px}.st-filtros{align-items:flex-end}
 .sp-hist time{margin-right:10px}
 .pf-fs{border:1px solid #c9a15e55;border-radius:8px;padding:10px 14px;margin:12px 0}.pf-fs legend{color:#f0c46a;font-weight:800;padding:0 6px}.pf-check{display:flex;gap:8px;align-items:center;margin:12px 0}.pf-check input{width:auto}
+/* ===== Tema nórdico del CRM real (portado de las vistas previas aprobadas) ===== */
+body.crm-n{background:#07090d url(../img/web/paisaje.svg) center bottom/100% auto no-repeat fixed;color:#e8edf3}
+body.crm-n::before{content:"";display:block;position:fixed;inset:0;writing-mode:horizontal-tb;font-size:0;z-index:0;pointer-events:none;
+ background-image:radial-gradient(1.2px 1.2px at 12% 18%,#fff9,transparent),radial-gradient(1px 1px at 27% 8%,#fff8,transparent),radial-gradient(1.4px 1.4px at 44% 22%,#fffa,transparent),radial-gradient(1px 1px at 61% 12%,#fff7,transparent),radial-gradient(1.3px 1.3px at 78% 26%,#fff9,transparent),radial-gradient(1px 1px at 90% 9%,#fff8,transparent),radial-gradient(1px 1px at 6% 34%,#fff6,transparent),radial-gradient(1.2px 1.2px at 35% 38%,#fff7,transparent),radial-gradient(1px 1px at 70% 40%,#fff6,transparent),radial-gradient(1.1px 1.1px at 53% 4%,#fff9,transparent)}
+.panel.rune::after{content:none}
+body.crm-n .top{background:rgba(7,12,20,.92);border-bottom:1px solid #c9a15e55}
+body.crm-n .top::after{content:"";position:absolute;left:0;right:0;bottom:-21px;height:20px;background:#0b0f14 url(../img/web/orn/banda-nudo.svg) repeat-x center/40px 20px;border-bottom:1px solid #c9a15e55;pointer-events:none}
+body.crm-n main{padding-top:44px}
+body.crm-n nav.tabs button.on,body.crm-n nav.tabs button:hover{color:#fff;border-bottom-color:#3ccf8e}
+body.crm-n h1{color:#fff;text-shadow:0 2px 14px rgba(0,0,0,.8)}
+body.crm-n h2{border-left-color:#f0c46a}
+body.crm-n .panel{background:rgba(10,20,34,.93);border:1px solid #c9a15e77}
+body.crm-n .panel::before{content:"";position:absolute;width:26px;height:26px;top:-5px;left:-5px;background:url(../img/web/orn/esquina.svg) center/contain no-repeat;pointer-events:none}
+body.crm-n .panel h3{color:#f0c46a;font-family:var(--display)}
+body.crm-n .kpi b{color:#fff}body.crm-n .kpi.blue b{color:#7fdcff}body.crm-n .kpi.red b{color:#f0c46a}
+body.crm-n .cls{background:#10233bcc;border-color:#2b3d55}
+body.crm-n .btn.ghost{border-color:#c9a15e99}
+body.crm-n .modal .panel::before{display:none}
+/* Solicitud de clases (tabla con color por teacher) */
+.sol-f{flex:0 0 auto}
+.sol-tabla td{vertical-align:middle}.sol-tabla .sol-warn{display:block;font-size:.8rem;margin-top:4px}
+.sol-est.retirada{background:#ffffff11;color:#9fb0c4;border:1px solid #5d6b80}
+@media (max-width:760px){.sol-tabla td[data-l]::before{content:attr(data-l);color:#9fb0c4;font-size:.8rem}.sol-acc{justify-content:flex-end!important;padding-bottom:12px!important}}
+/* Agenda con leyenda de teachers (sin foto) */
+.ag-wrap2{display:grid;grid-template-columns:1fr 240px;gap:14px}
+.ag-side{background:rgba(8,16,28,.94);border:1px solid #c9a15e88;border-radius:8px;padding:12px;align-self:start}
+.ag-side h2{font:800 1.05rem var(--display);color:#f0c46a;border:0;padding:0;margin:4px 0 10px}
+.ag-ley{list-style:none;margin:0 0 18px;padding:0;display:grid;gap:10px}
+.ag-ley li{display:flex;gap:10px;align-items:center;font-size:.9rem}.ag-ley i{width:22px;height:22px;border-radius:5px;flex:none;border:1px solid #fff4}
+.sched .ev.tc{background:color-mix(in srgb,var(--c) 40%,#0b1626);border:1px solid color-mix(in srgb,var(--c) 70%,#fff);border-left:4px solid var(--c);color:#fff}
+.sched .ev.tc .muted{color:#dbe4ee}
+.sched .hd{color:#f0c46a;background:#0b1828}
+@media (max-width:1000px){.ag-wrap2{grid-template-columns:1fr}}
+.sp-tcols .sp-ancho{grid-column:1/-1}.sp-teacher .sp-donut{width:110px;height:110px}
+.ag-hero{position:relative;margin:-20px 0 14px;border-radius:10px;overflow:hidden;border:1px solid #c9a15e77;min-height:170px;display:flex;align-items:center}
+.ag-hero img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 30%}
+.ag-hero div{position:relative;padding:22px 28px;background:linear-gradient(90deg,rgba(5,10,18,.85),transparent)}
+.ag-hero h1{margin:4px 0}.ag-hero p{margin:0;color:#eef2f7;text-shadow:0 1px 8px #000}
+.ag-hero .sp-kicker{font:700 .75rem var(--body);letter-spacing:.18em;text-transform:uppercase;color:#f0c46a}
+.ag-hero div{max-width:62%;background:linear-gradient(90deg,rgba(5,10,18,.8),rgba(5,10,18,0))}.ag-hero{min-height:200px}
