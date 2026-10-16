@@ -142,6 +142,12 @@
         return db.teachers.filter((t) => role() === "admin" || t.id === me().id).map((t) => Object.assign({}, t, { full_name: prof(t.id).full_name }));
       },
       async listPackages() { return db.packages; },
+      /* ---- Perfiles (migración 0900). Demo: sin BIO/estilo guardados -> la interfaz muestra estados vacíos. ---- */
+      async getStudentProfile(sid) { const ok = visibleStudents().some((s) => s.id === sid); if (!ok) throw new Error("Permiso denegado"); return (db.student_profiles || {})[sid] || null; },
+      async getInternalNote(sid) { need("admin", "teacher"); if (!visibleStudents().some((s) => s.id === sid)) return null; const n = db.notes && db.notes[sid]; return n ? { notes: n } : null; },
+      async listTeacherProfiles() { const cols = ["#2f7fe0", "#c0862a", "#3ccf8e"];
+        return db.teachers.map((t, i) => ({ teacher_id: t.id, display_name: prof(t.id).full_name, color: cols[i % 3], photo_url: null, role_title: "Teacher", bio: null,
+          experience: [], strengths: [], teaching_style: null, hobbies: [], topics: [], published: true })); },
       async listStudentPackages(sid) {
         const ok = visibleStudents().map((s) => s.id);
         return db.student_packages.filter((p) => ok.includes(p.student_id) && (!sid || p.student_id === sid)).map((p) => Object.assign({}, p, { classes_remaining: p.classes_total - p.classes_used, usable: usable(p) }));
@@ -359,6 +365,9 @@
         return ts.map((t) => Object.assign(t, { full_name: (ps.find((p) => p.id === t.id) || {}).full_name, availability: (t.teacher_availability || []).map((a) => [a.weekday, a.start_hour, a.end_hour]) }));
       },
       async listPackages() { const c = await client(); return q(c.from("packages").select("*").eq("active", true).order("code")); },
+      async getStudentProfile(sid) { const c = await client(); const r = await q(c.from("student_profiles").select("*").eq("student_id", sid)); return r[0] || null; },
+      async getInternalNote(sid) { const c = await client(); const r = await q(c.from("student_internal_notes").select("notes, interests, learning_style, updated_at").eq("student_id", sid)); return r[0] || null; },
+      async listTeacherProfiles() { const c = await client(); return q(c.from("teacher_public_profiles").select("*").order("display_name")); },
       async listStudentPackages(sid) { const c = await client(); let r = c.from("student_package_balance").select("*").order("purchase_date"); if (sid) r = r.eq("student_id", sid); return q(r); },
       async createClass(o) {
         const c = await client(); const n = o.class_number ? +o.class_number : null; const me = await this.currentUser();

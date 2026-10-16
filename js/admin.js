@@ -2,9 +2,9 @@
 (async () => {
   const M = MEC, api = M.api, app = M.$("#app");
   const me = await M.requireRole("admin");
-  let tab = "agenda", week = M.weekStart(new Date()), teacherFilter = "";
+  let tab = "agenda", week = M.weekStart(new Date()), teacherFilter = "", reqStatus = "pending", estMode = "perfiles";
   if (location.hash === "#solicitudes") tab = "solicitudes";
-  M.header(me, [["agenda", "Agenda"], ["solicitudes", "Solicitudes"], ["estudiantes", "Estudiantes"], ["asistencia", "Asistencia"], ["paquetes", "Paquetes"], ["teachers", "Teachers"], ["kids", "Material Kids"]], (t) => { tab = t; render(); });
+  M.header(me, [["agenda", "Agenda"], ["solicitudes", "Solicitud de clases"], ["estudiantes", "Estudiantes"], ["asistencia", "Asistencia"], ["paquetes", "Paquetes"], ["teachers", "Teachers"], ["kids", "Material Kids"]], (t) => { tab = t; render(); });
   const render = M.wrapErr(async () => { app.innerHTML = '<p class="muted">Cargando…</p>'; await views[tab](); });
 
   const views = {
@@ -44,17 +44,26 @@
     },
     async solicitudes() {
       const [reqs, teachers] = await Promise.all([api.listRequests(), api.listTeachers()]);
-      const shown = reqs.filter((r) => !teacherFilter || r.teacher_id === teacherFilter);
-      app.innerHTML = `<h1>Solicitudes de clase</h1>
+      const shown = reqs.filter((r) => (!teacherFilter || r.teacher_id === teacherFilter) && (!reqStatus || r.status === reqStatus));
+      const cnt = (st) => reqs.filter((r) => (!teacherFilter || r.teacher_id === teacherFilter) && (!st || r.status === st)).length;
+      app.innerHTML = `<h1>Solicitud de clases</h1><p class="muted">Solo el admin aprueba o rechaza. Los teachers ven el estado en modo lectura.</p>
+        <div class="row" role="group" aria-label="Filtrar por estado" style="margin-bottom:10px;gap:6px;flex-wrap:wrap">${[["", "Todas"], ["pending", "Pendientes"], ["approved", "Aprobadas"], ["rejected", "Rechazadas"], ["cancelled", "Retiradas"]].map(([k, n]) => `<button type="button" class="btn sm ${k === reqStatus ? "" : "ghost"}" data-rs="${k}" style="flex:0 0 auto" aria-pressed="${k === reqStatus}">${n} (${cnt(k)})</button>`).join("")}</div>
         <div class="panel"><div class="row"><div class="muted">Un calendario por teacher. Las solicitudes pendientes no bloquean el bloque; al aprobar se vuelve a verificar todo.</div>
         <div style="flex:0 0 240px"><select id="tf"><option value="">Todos los teachers</option>${teachers.map((t) => `<option value="${t.id}" ${t.id === teacherFilter ? "selected" : ""}>${M.esc(t.full_name)} (${reqs.filter((r) => r.teacher_id === t.id && r.status === "pending").length})</option>`).join("")}</select></div></div></div>
         ${M.requestsView(shown, { showTeacher: true })}`;
       M.$("#tf").onchange = (e) => { teacherFilter = e.target.value; render(); };
+      M.$$("[data-rs]").forEach((b) => (b.onclick = () => { reqStatus = b.dataset.rs; render(); }));
       M.bindRequests(api, render);
     },
     async estudiantes() {
       const [st, teachers, pk] = await Promise.all([api.listStudents(), api.listTeachers(), api.listStudentPackages()]);
-      app.innerHTML = `<h1>Estudiantes y paquetes</h1>
+      const sw = `<div class="row" role="group" aria-label="Vista" style="margin-bottom:12px;gap:6px"><button type="button" class="btn sm ${estMode === "perfiles" ? "" : "ghost"}" data-em="perfiles" style="flex:0 0 auto" aria-pressed="${estMode === "perfiles"}">Perfiles</button><button type="button" class="btn sm ${estMode === "gestion" ? "" : "ghost"}" data-em="gestion" style="flex:0 0 auto" aria-pressed="${estMode === "gestion"}">Gestión y paquetes</button></div>`;
+      const bindSw = () => M.$$("[data-em]").forEach((b) => (b.onclick = () => { estMode = b.dataset.em; render(); }));
+      if (estMode === "perfiles") {
+        app.innerHTML = `<h1>Estudiantes</h1>${sw}<div id="pf-root"></div>`; bindSw();
+        return M.perfil.studentsBrowser(M.$("#pf-root"), { students: st, showTeacher: true });
+      }
+      app.innerHTML = `<h1>Estudiantes y paquetes</h1>${sw}
         <div class="grid g4" style="margin-bottom:18px">
           <div class="panel kpi"><b>${st.length}</b><span>Estudiantes</span></div>
           <div class="panel kpi blue"><b>${st.reduce((a, s) => a + s.remaining.classes_remaining, 0)}</b><span>Clases por dictar (pagadas/vigentes)</span></div>
@@ -73,6 +82,7 @@
           <td>${M.fmtDate(p.purchase_date)}</td><td>${p.expiry_date ? M.fmtDate(p.expiry_date) : "—"}</td><td><select data-pay="${p.id}" style="min-width:120px">${Object.entries(M.PAY_LABEL).map(([k, v]) => `<option value="${k}" ${k === p.payment_status ? "selected" : ""}>${v}</option>`).join("")}</select>
           ${p.usable ? "" : `<br><span class="small" style="color:var(--warn)">No usable: ${p.payment_status === "pending" ? "pago pendiente" : p.payment_status === "refunded" || p.payment_status === "cancelled" ? "anulado" : "vencido"}</span>`}</td>
           <td>${p.next_billing_date ? M.fmtDate(p.next_billing_date) : '<span class="muted">—</span>'}</td></tr>`).join("") || '<tr><td colspan="8" class="muted">Sin paquetes</td></tr>'}</tbody></table></div></div>`;
+      bindSw();
       M.$$("[data-assign]").forEach((s) => (s.onchange = M.wrapErr(async () => { await api.assignTeacher(s.dataset.assign, s.value); M.toast("Teacher asignado"); render(); })));
       M.$$("[data-pay]").forEach((el) => (el.onchange = M.wrapErr(async () => { await api.setPaymentStatus(el.dataset.pay, el.value); M.toast("Estado de pago actualizado"); render(); })));
       M.$$("[data-pkg]").forEach((b) => (b.onclick = () => addPackage(st.find((s) => s.id === b.dataset.pkg))));

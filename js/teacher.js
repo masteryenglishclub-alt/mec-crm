@@ -4,7 +4,7 @@
   const me = await M.requireRole("teacher");
   let tab = "clases";
   if (location.hash === "#solicitudes") tab = "solicitudes";
-  M.header(me, [["clases", "Mis clases"], ["solicitudes", "Solicitudes"], ["estudiantes", "Mis estudiantes"], ["progreso", "Progreso mensual"], ["perfil", "Mi Meet"], ["kids", "Material Kids"]], (t) => { tab = t; render(); });
+  M.header(me, [["clases", "Mis clases"], ["solicitudes", "Solicitudes"], ["estudiantes", "Estudiantes"], ["progreso", "Progreso mensual"], ["perfil", "Mi Meet"], ["kids", "Material Kids"]], (t) => { tab = t; render(); });
   const render = M.wrapErr(async () => { app.innerHTML = '<p class="muted">Cargando…</p>'; await views[tab](); });
   // Regla de decisión oficial (Rúbrica Conversacional v2.1, sección 4) solo para la vista previa; la base de datos decide.
   const decide = (s, kind) => {
@@ -47,14 +47,12 @@
       const reqs = await api.listRequests();
       app.innerHTML = `<h1>Solicitudes de clase</h1><p class="muted">Tus estudiantes solicitan bloques libres de tu calendario. Solo el admin aprueba o rechaza; aquí ves su estado.</p>${M.requestsView(reqs, { readOnly: true })}`;
     },
-    async estudiantes() {
+    async estudiantes() { // RLS: el teacher solo recibe a sus propios estudiantes
       const st = await api.listStudents();
-      app.innerHTML = `<h1>Mis estudiantes</h1><div class="grid g2">${st.map((s) => { const done = s.start_class_number - 1 + s.classes_completed;
-        return `<div class="panel"><h3>${M.esc(s.full_name)}</h3><p class="muted small">${s.program === "kids" ? "Programa Kids" : "Programa Adultos"} · desde ${M.fmtDate(s.start_date)}</p>
-        <p>Nivel <b>${M.esc(s.level_name)}${s.current_sublevel ? "." + s.current_sublevel : " · Repaso"}</b> · próxima clase <b>#${s.remaining.next_class_number}</b> (${M.esc(M.classInfo(s.remaining.next_class_number, s.program).title)})</p>
-        <div class="bar"><i style="width:${(done / 160) * 100}%"></i></div><p class="small muted">${done}/160 del programa · ${s.remaining.classes_remaining} clases restantes en paquete</p>
-        <button class="btn ghost sm" data-extra="${s.id}">Agendar sesión de refuerzo</button></div>`; }).join("") || '<p class="muted">Sin estudiantes asignados.</p>'}</div>`;
-      M.$$("[data-extra]").forEach((b) => (b.onclick = () => extra(b.dataset.extra)));
+      app.innerHTML = `<h1>Estudiantes</h1><p class="muted">Tus estudiantes asignados. Abre un perfil para ver paquete, clases, feedback, BIO, progreso y estilo de aprendizaje.</p><div id="pf-root"></div>`;
+      await M.perfil.studentsBrowser(M.$("#pf-root"), { students: st, showTeacher: false,
+        extra: (s) => `<button class="btn ghost sm" data-extra="${s.id}">Agendar sesión de refuerzo</button>`,
+        bindExtra: (r) => r.querySelectorAll("[data-extra]").forEach((b) => (b.onclick = () => extra(b.dataset.extra))) });
     },
     async progreso() {
       const [st, pr] = await Promise.all([api.listStudents(), api.listProgress()]);

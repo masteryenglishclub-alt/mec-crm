@@ -5,7 +5,11 @@
   let tab = "inicio";
   let week = M.weekStart(new Date(Date.now() + 864e5 * 7));  // semana siguiente por defecto
   if (location.hash === "#solicitar") tab = "solicitar";
-  M.header(me, [["inicio", "Inicio"], ["solicitar", "Solicitar clase"], ["camino", "Mi camino"], ["clases", "Mis clases"], ["feedback", "Feedback"], ["libros", "Libros"]], (t) => { tab = t; render(); });
+  else if (location.hash === "#clases" || location.hash === "#teachers") tab = location.hash.slice(1);
+  const goTab = (t) => { tab = t; M.$$("[data-tab]").forEach((b) => b.classList.toggle("on", b.dataset.tab === t)); render(); };
+  window.addEventListener("hashchange", () => { const h = location.hash.slice(1); if (["solicitar", "clases", "teachers"].includes(h) && h !== tab) goTab(h); });
+  M.header(me, [["inicio", "Inicio"], ["solicitar", "Solicitar clase"], ["camino", "Mi camino"], ["clases", "Mis clases"], ["teachers", "Teachers"], ["feedback", "Feedback"], ["libros", "Libros"]], (t) => { tab = t; render(); });
+  M.$$("[data-tab]").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab));
   const render = M.wrapErr(async () => { app.innerHTML = '<p class="muted">Cargando…</p>'; await views[tab](); });
   const data = async () => { const [s] = await api.listStudents(); return s; };
   const nice = (c) => c.class_type === "conversation_lab" ? "Conversation Lab · conversación guiada" : M.TYPE_LABEL[c.class_type];
@@ -121,12 +125,17 @@
             return `<div class="cls"><div>${st} <b>#${n}</b> · ${M.esc(M.classInfo(n, s.program).title)}</div><span class="tag">${M.TYPE_LABEL[M.classInfo(n).type] === "Conversation Lab" ? "Conversación guiada" : M.TYPE_LABEL[M.classInfo(n).type]}</span></div>`; }).join(""); })()}</div>`;
     },
     async clases() {
-      const cls = await api.listClasses(), now = new Date().toISOString(), b = await api.bookingStatus();
-      const up = cls.filter((c) => c.status === "scheduled" && c.starts_at >= now), past = cls.filter((c) => !(c.status === "scheduled" && c.starts_at >= now)).reverse();
-      app.innerHTML = `<h1>Mis clases</h1><div class="panel rune"><h3>Próximas</h3>${up.map(clsRow).join("") || '<p class="muted">Sin clases agendadas.</p>'}
-        <p class="small muted">Horario en hora de Bogotá. El enlace de Google Meet se activa a la hora de tu clase. Cancelación sin cargo hasta ${b.late_cancel_hours} h antes · pases libres: ${b.passes_remaining} de ${b.passes_total}.</p></div>
-        <div class="panel"><h3>Historial</h3>${past.map(clsRow).join("")}</div>`;
-      bindCancel(b);
+      const [s, cls, b, pkgs] = await Promise.all([data(), api.listClasses(), api.bookingStatus(), api.listStudentPackages()]);
+      const prof = await api.getStudentProfile(s.id), now = new Date().toISOString();
+      const up = cls.filter((c) => c.status === "scheduled" && c.starts_at >= now);
+      app.innerHTML = `<h1>Mis clases</h1>${M.perfil.misClases({ s, pkgs, classes: cls, prof, self: true, agendar: "#solicitar" })}
+        <div class="panel rune pf-sec"><h3>Próximas clases agendadas</h3>${up.map(clsRow).join("") || '<p class="muted">Sin clases agendadas.</p>'}
+        <p class="small muted">Horario en hora de Bogotá. El enlace de Google Meet se activa a la hora de tu clase. Cancelación sin cargo hasta ${b.late_cancel_hours} h antes · pases libres: ${b.passes_remaining} de ${b.passes_total}.</p></div>`;
+      M.perfil.bindTest(app); bindCancel(b);
+    },
+    async teachers() {
+      const [s, list] = await Promise.all([data(), api.listTeacherProfiles()]);
+      app.innerHTML = `<h1>Teachers</h1>${M.perfil.teachersView(list, { myTeacherId: s.teacher_id, agendar: "#solicitar" })}`;
     },
     async feedback() {
       const cls = (await api.listClasses()).filter((c) => c.sentences || c.teacher_note).reverse();
