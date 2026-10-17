@@ -5,7 +5,7 @@
   const M = window.MEC, esc = M.esc;
   // Paquetes v3 (tabla oficial; COP). El Upgrade propone el siguiente del mismo tipo y lleva a precios.html.
   const V3 = { P: [["P1", 4], ["P2", 8], ["P3", 16], ["P4", 24]], G: [["G1", 8], ["G2", 16], ["G3", 24]], C: [["C1", 12, "4 personalizadas + 8 grupales"], ["C2", 20, "8 personalizadas + 12 grupales"], ["C3", 28, "12 personalizadas + 16 grupales"]] };
-  const NAME = { SP: "Clase personalizada suelta", SG: "Clase grupal suelta" };
+  const NAME = { SP: "Clase personalizada suelta", SG: "Clase grupal suelta", C1: "Combo 1", C2: "Combo 2", C3: "Combo 3", "ESP-9": "Paquete especial · 9 personalizadas" };
   const TIPO = { P: "Personalizadas 1 a 1", G: "Grupales", C: "Combinado" }, ANCLA = { P: "personalizadas", G: "grupales", C: "combinados" };
   const card = (t, body, cls = "") => `<section class="sp-card ${cls}"><h2>${t}</h2>${body}</section>`;
   const lista = (a, vacio = "Por completar") => a && a.length ? `<ul>${a.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : `<p class="sp-pend">${vacio}</p>`;
@@ -34,7 +34,7 @@
     let sig, tt = t;
     if (arr && arr.some((x) => x[0] === code)) sig = arr[arr.findIndex((x) => x[0] === code) + 1];
     else { tt = "P"; sig = V3.P.find((x) => x[1] > (p.classes_total || 0)); }
-    return sig ? `<a class="sp-btn oro" href="precios.html#${ANCLA[tt]}">Upgrade · Pasa a ${sig[0]} · ${sig[2] ? sig[2] : sig[1] + " clases"}</a>` : `<p class="sp-small">Ya tienes el paquete más grande. <a href="precios.html">Ver precios</a></p>`;
+    return sig ? `<a class="sp-btn oro" href="precios.html#${ANCLA[tt]}">Upgrade · Pasa a ${NAME[sig[0]] || sig[0]} · ${sig[2] ? sig[2] : sig[1] + " clases"}</a>` : `<p class="sp-small">Ya tienes el paquete más grande. <a href="precios.html">Ver precios</a></p>`;
   }
 
 
@@ -54,7 +54,7 @@
       const tot = p.classes_total, used = p.classes_used, quedan = p.classes_remaining ?? tot - used, code = String(p.package_code || "").toUpperCase();
       const vence = p.expiry_date || addMeses(p.purchase_date, tot > 20 ? 12 : 6);
       const v3 = /^[PGC]\d$/.test(code) && V3[code[0]].find((x) => x[0] === code);
-      paq = `<p class="sp-paq"><strong>${esc(NAME[code] || code || "Paquete")}</strong>${v3 ? " · " + TIPO[code[0]] + " · " + (v3[2] || tot + " clases") : ` · ${tot} clase${tot === 1 ? "" : "s"}`}${code.endsWith("-USD") ? " (catálogo anterior)" : ""}${p.payment_status === "pending" ? ' <span class="sp-tag">Pago pendiente</span>' : ""}</p>
+      paq = `<p class="sp-paq"><strong>${esc(NAME[code] || code || "Paquete")}</strong>${v3 ? (code[0] === "C" ? "" : " · " + TIPO[code[0]]) + " · " + (v3[2] || tot + " clases") : ` · ${tot} clase${tot === 1 ? "" : "s"}`}${code.endsWith("-USD") ? " (catálogo anterior)" : ""}${p.payment_status === "pending" ? ' <span class="sp-tag">Pago pendiente</span>' : ""}</p>
         <div class="sp-cont"><div><b>${tot}</b><small>compradas</small></div><div><b>${used}</b><small>tomadas</small></div><div><b>${quedan}</b><small>${ctx.self ? "te quedan" : "quedan"}</small></div></div>
         <div class="sp-barra" role="progressbar" aria-valuemin="0" aria-valuemax="${tot}" aria-valuenow="${used}" aria-label="Clases tomadas"><i style="width:${tot ? (used / tot) * 100 : 0}%"></i></div>
         <p class="sp-small">Comprado el ${M.fmtDate(p.purchase_date)} · <strong>Vence el ${M.fmtDate(vence)}</strong> (${tot > 20 ? "1 año: más de 20 clases" : "6 meses: 20 clases o menos"})</p>${ctx.self ? upgrade(p) : ""}`;
@@ -68,13 +68,13 @@
         <dt>Nivel actual</dt><dd>${lvl ? `<span class="sp-nivel">${lvl.levelCode}</span> ${lvl.sub ? "Subnivel " + lvl.levelCode + "." + lvl.sub : "Repaso"} · ${esc(lvl.levelName || s.level_name || "")}` : "—"}</dd></dl>`)}
       ${card(ctx.self ? "Mi paquete" : "Paquete", paq)}
       ${card("Clases anteriores", past.length ? `<ol class="sp-hist">${past.slice(0, 12).map((c) => `<li><time datetime="${c.starts_at}">${M.fmtDate(c.starts_at)}</time><span>${esc(c.title || M.classInfo(c.class_number, s.program).title)}</span></li>`).join("")}</ol>${past.length > 12 ? `<p class="sp-small">… y ${past.length - 12} más.</p>` : ""}` : `<p class="sp-pend">Aún no hay clases anteriores.</p>`)}
-      ${card("Clase actual", cur ? `<p class="sp-cod">${esc(cur.title)}</p><p class="sp-small">Clase ${done} de 160 del programa.</p>` : `<p class="sp-pend">Aún no hay clases completadas.</p>`)}
+      ${card("Clase actual", cur ? `<p class="sp-cod">${esc(cur.title)}</p><p class="sp-small">Clase ${((done - 1) % 32) + 1} de 32 del curso de nivel.</p>` : `<p class="sp-pend">Aún no hay clases completadas.</p>`)}
       ${card("Próxima clase", next ? `<p class="sp-cod">${esc(next.title)}</p>` + (sched ? `<div class="sp-variante ok"><span class="sp-tag ok">Agendada</span><span>${M.fmtDateTime(sched.starts_at)} · Teacher ${esc(sched.teacher_name || s.teacher_name || "")}</span></div>`
-        : `<div class="sp-variante"><span class="sp-tag">Sin agendar</span>${ctx.agendar ? `<a class="sp-btn" href="${ctx.agendar}">Agendar</a>` : ""}</div>`) : `<p class="sp-pend">Programa completado.</p>`)}
+        : `<div class="sp-variante"><span class="sp-tag">Sin agendar</span>${ctx.agendar ? `<a class="sp-btn" href="${ctx.agendar}">Agendar</a>` : ""}</div>`) : `<p class="sp-pend">Todos los cursos completados.</p>`)}
       ${card(ctx.self ? "Mis feedbacks" : "Feedbacks", fbs.length ? `<ul class="sp-fb">${fbs.slice(0, 8).map((c) => `<li><div class="sp-fb-h"><strong>${esc(c.title || "")}</strong><time>${M.fmtDate(c.starts_at)}</time></div>${c.teacher_note ? `<p>${esc(c.teacher_note)}</p>` : ""}${c.sentences && c.sentences.length ? `<p class="sp-small">Frases: ${c.sentences.map(esc).join(" · ")}</p>` : ""}</li>`).join("")}</ul>` : `<p class="sp-pend">Aún no hay feedback.</p>`, "ancho")}
       ${card(`${ctx.self ? "Mi BIO" : "BIO"} ${pr.bio_status === "completa" ? '<span class="sp-tag ok">Completa</span>' : '<span class="sp-tag">En construcción</span>'}`, (ctx.self ? `<p class="sp-small">Tu teacher la va completando a medida que te conoce.</p>` : "") +
         (hasBio ? `<div class="sp-bio"><div><h3>Metas</h3>${lista(pr.goals)}</div><div><h3>Gustos</h3>${lista(pr.likes)}</div><div><h3>Personalidad</h3>${lista(pr.personality)}</div></div>` : `<p class="sp-pend">Aún no hay BIO.</p>`), "ancho")}
-      ${card(`${ctx.self ? "Mi progreso" : "Progreso"} · Marco Común Europeo`, mcerSvg(mcer(done)) + `<p class="sp-small">Calculado con las clases completadas del programa (${done} de 160). Cada nivel tiene 5 subniveles.</p>`)}
+      ${card(`${ctx.self ? "Mi progreso" : "Progreso"} · Marco Común Europeo`, mcerSvg(mcer(done)) + `<p class="sp-small">Avance por curso de nivel: cada curso tiene 32 clases y 5 subniveles.</p>`)}
       ${card("Estilo de aprendizaje", (est ? estiloSvg(est) : `<p class="sp-pend">Aún no hay estilo de aprendizaje registrado.</p>`) + (ctx.self ? `<p><button type="button" class="sp-btn" data-pf-test aria-describedby="pf-test-n">Hacer test</button> <span id="pf-test-n" class="sp-small" hidden>Próximamente</span></p>` : ""))}
     </div>`;
   }
@@ -116,7 +116,7 @@
       $("#pf-grid").innerHTML = r.map((s) => { const done = (s.start_class_number || 1) - 1 + (s.classes_completed || 0), i = M.classInfo(Math.max(1, done), s.program);
         const ini = String(s.full_name || "?").trim().split(/\s+/).slice(0, 2).map((w) => w[0] || "").join("").toUpperCase(), nx = next[s.id];
         return `<button type="button" class="st-item st-card" data-pf="${s.id}" aria-label="Abrir perfil de ${esc(s.full_name || "estudiante")}">
-        <span class="st-top"><span class="st-av" aria-hidden="true">${esc(ini)}</span><span class="st-id"><strong>${esc(s.full_name || "—")}</strong>
+        <span class="st-top"><span class="st-av" aria-hidden="true">${esc(ini)}</span><span class="st-id"><strong>${esc(s.full_name || "—")}</strong>${M.testBadge ? M.testBadge(s) : ""}
         <span><span class="sp-nivel">${i.levelCode}</span> ${done ? esc(i.title) : "Sin clases aún"}</span><small>${s.program === "kids" ? "Kids" : "Adultos"}${opts.showTeacher ? ` · Teacher: ${esc(s.teacher_name || "Por asignar")}` : ""}</small></span></span>
         <span class="st-prox">Próxima clase: ${nx ? `${esc(M.fmtDateTime(nx.starts_at))} · <b>Agendada</b>` : "<b>Sin agendar</b>"}</span></button>`; }).join("") || `<p class="sp-pend">${st.length ? "Sin resultados." : "Aún no hay estudiantes."}</p>`;
       if (opts.bindExtra) opts.bindExtra($("#pf-grid"));
@@ -203,5 +203,5 @@
   function editTeacher(tid, name, opts) {
     M.modal(`<h2>Perfil público · ${esc(name)}</h2><div id="tp-m"></div>`, () => teacherForm(M.$("#tp-m"), tid, name, Object.assign({ modal: true }, opts)));
   }
-  M.perfil = { mcerCard: (done) => card("Mi progreso · Marco Común Europeo", mcerSvg(mcer(done)) + `<p class="sp-small">${done} de 160 clases del programa.</p>`), misClases, teachersView, studentsBrowser, bindTest, editStudent, teacherForm, editTeacher };
+  M.perfil = { mcerCard: (done) => card("Mi progreso · Marco Común Europeo", mcerSvg(mcer(done)) + `<p class="sp-small">Avance por curso de nivel (32 clases cada uno).</p>`), misClases, teachersView, studentsBrowser, bindTest, editStudent, teacherForm, editTeacher };
 })();
