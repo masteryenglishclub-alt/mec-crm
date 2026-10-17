@@ -140,7 +140,7 @@
   }
   async function extra(sid) {
     const st = (await api.listStudents()).find((s) => s.id === sid);
-    M.modal(`<h2>Sesión de refuerzo · ${M.esc(st.full_name)}</h2><p class="muted small">No suma al contador de 160 ni descuenta del paquete.</p>
+    M.modal(`<h2>Sesión de refuerzo · ${M.esc(st.full_name)}</h2><p class="muted small">No suma al contador del curso ni descuenta del paquete.</p>
       <label>Fecha y hora (Bogotá)</label><div class="row"><input id="ed" type="date"><select id="eh">${Array.from({ length: 12 }, (_, i) => `<option value="${i + 6}">${String(i + 6).padStart(2, "0")}:00</option>`).join("")}</select></div>
       <p><button class="btn" id="ok">Agendar</button> <button class="btn ghost" onclick="MEC.closeModal()">Cancelar</button></p>`, () => {
       M.$("#ok").onclick = M.wrapErr(async () => {

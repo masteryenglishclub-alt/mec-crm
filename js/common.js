@@ -20,7 +20,7 @@
   M.requestsView = function (reqs, opts = {}) {
     const pend = reqs.filter((r) => r.status === "pending"), done = reqs.filter((r) => r.status !== "pending").slice().reverse().slice(0, 12);
     const row = (r) => `<div class="cls"><div><b>${M.esc(r.student_name)}</b> ${M.tagReq(r.status)}${opts.showTeacher ? ` <span class="muted small">· ${M.esc(r.teacher_name)}</span>` : ""}<br>
-        <span>${M.fmtDateTime(r.starts_at)}</span>${r.next_class_number && r.status === "pending" ? ` <span class="muted small">· se agendará la clase #${r.next_class_number} (${M.esc(M.classInfo(r.next_class_number).title)})</span>` : ""}
+        <span>${M.fmtDateTime(r.starts_at)}</span>${r.next_class_number && r.status === "pending" ? ` <span class="muted small">· se agendará la clase ${M.classLabel(r.next_class_number)} (${M.esc(M.classInfo(r.next_class_number).title)})</span>` : ""}
         ${r.student_note ? `<br><span class="small">“${M.esc(r.student_note)}”</span>` : ""}
         ${r.competing ? `<br><span class="small" style="color:var(--warn)">⚑ ${r.competing} solicitud(es) más para este mismo bloque: al aprobar una, las otras se rechazan automáticamente.</span>` : ""}
         ${r.conflict ? `<br><span class="small" style="color:var(--red)">✖ El bloque ya está ocupado: no se puede aprobar.</span>` : ""}
@@ -45,7 +45,7 @@
         <td data-l="Estudiante"><strong>${M.esc(r.student_name)}</strong>${r.student_note ? `<span class="sol-warn muted">“${M.esc(r.student_note)}”</span>` : ""}</td>
         <td data-l="Teacher"><span class="sol-prof"><i></i>${M.esc(r.teacher_name || "—")}</span></td>
         <td data-l="Fecha y hora">${M.fmtDateTime(r.starts_at)}</td>
-        <td data-l="Clase">${r.next_class_number && r.status === "pending" ? `#${r.next_class_number} · ${M.esc(M.classInfo(r.next_class_number).title)}` : "—"}
+        <td data-l="Clase">${r.next_class_number && r.status === "pending" ? `${M.classLabel(r.next_class_number)} · ${M.esc(M.classInfo(r.next_class_number).title)}` : "—"}
           ${r.competing ? `<span class="sol-warn" style="color:var(--warn)">${r.competing} solicitud(es) más para este bloque: al aprobar una, las otras se rechazan.</span>` : ""}
           ${r.conflict ? `<span class="sol-warn" style="color:#ff9a9e">Bloque ocupado: no se puede aprobar.</span>` : ""}
           ${r.payment_blocked ? `<span class="sol-warn" style="color:var(--warn)">Pago pendiente: no se puede aprobar.</span>` : ""}
@@ -71,7 +71,11 @@
   M.packageExpiry = (d, pk) => { if (!d || !pk || !pk.validity_months) return null; const x = new Date(d + "T12:00:00Z"); x.setUTCMonth(x.getUTCMonth() + pk.validity_months); return x.toISOString().slice(0, 10); };
   M.PAY_LABEL = { pending: "Pendiente", paid: "Pagado", partial: "Parcial", overdue: "Vencido", refunded: "Reembolsado", cancelled: "Anulado" };
 
-  /** Información de una clase del programa (1-160) */
+  /** Etiqueta visible por curso de nivel (cada nivel es un curso independiente de 32 clases). n es el número interno 1-160. */
+  M.classLabel = (n) => n ? `${M.LEVELS[Math.floor((n - 1) / 32)]} · clase ${((n - 1) % 32) + 1}/32` : "Refuerzo";
+  /** Información de una clase (número interno 1-160) */
+  /** Insignia para cuentas de prueba (profiles.is_test): no cuentan en ingresos, reportes ni conteos. */
+  M.testBadge = (s) => s && s.is_test ? ' <span class="tag" title="No cuenta en ingresos, reportes ni conteos">Cuenta de prueba</span>' : "";
   M.classInfo = function (n, program) {
     if (!n) return { title: "Sesión de refuerzo", type: "extra_reinforcement" };
     const li = Math.floor((n - 1) / 32), p = ((n - 1) % 32) + 1;

@@ -4,11 +4,12 @@
   const me = await M.requireRole("admin");
   let tab = "agenda", week = M.weekStart(new Date()), teacherFilter = "", reqStatus = "pending", estMode = "perfiles";
   if (location.hash === "#solicitudes") tab = "solicitudes";
-  M.header(me, [["agenda", "Agenda"], ["solicitudes", "Solicitud de clases"], ["estudiantes", "Estudiantes"], ["asistencia", "Asistencia"], ["paquetes", "Paquetes"], ["teachers", "Teachers"], ["kids", "Material Kids"]], (t) => { tab = t; render(); });
+  M.header(me, [["agenda", "Agenda"], ["solicitudes", "Solicitud de clases"], ["estudiantes", "Estudiantes"], ["asistencia", "Asistencia"], ["paquetes", "Paquetes"], ["teachers", "Teachers"], ["kids", "Material Kids"], ["cargar", "Cargar datos"]], (t) => { tab = t; render(); });
   const render = M.wrapErr(async () => { app.innerHTML = '<p class="muted">Cargando…</p>'; await views[tab](); });
 
   const views = {
     async kids() { await M.kidsMaterialView(app); },
+    async cargar() { await cargarView(); },
     async agenda() {
       const to = new Date(week.getTime() + 7 * 864e5);
       const [cls, teachers, students, tps] = await Promise.all([api.listClasses({ from: week.toISOString(), to: to.toISOString() }), api.listTeachers(), api.listStudents(), api.listTeacherProfiles().catch(() => [])]);
@@ -56,7 +57,7 @@
           <ul class="agv-teachers">${teachers.map((t) => `<li><a href="profesor.html?id=${encodeURIComponent(t.id)}" target="_blank" rel="noopener" style="--tc:${colors[t.id]}" title="Ver perfil de ${esc(t.full_name)} (pestaña nueva)"><span class="agv-av">${esc(ini(t.full_name))}</span><span class="agv-tn">${esc(t.full_name)}</span></a></li>`).join("") || '<li class="muted">Sin teachers</li>'}</ul>
           <p class="agv-hint">Clic en un teacher para ver su perfil</p></div>
           <blockquote class="agv-quote"><p>“Cada clase cuenta: la constancia de hoy es la fluidez de mañana.”</p><footer>— Mastery English Club</footer></blockquote>
-          <ul class="agv-feat"><li>${svg("cal")}<span>Clases dinámicas y personalizadas</span></li><li>${svg("grp")}<span>Profesores certificados</span></li><li>${svg("shield")}<span>Metodología comprobada</span></li><li>${svg("star")}<span>Acompañamiento constante</span></li></ul>
+          <ul class="agv-feat"><li>${svg("cal")}<span>Clases dinámicas y personalizadas</span></li><li>${svg("grp")}<span>Profesores con experiencia</span></li><li>${svg("shield")}<span>Metodología comprobada</span></li><li>${svg("star")}<span>Acompañamiento constante</span></li></ul>
           <button type="button" class="agv-cta" id="agv-cta">${svg("cal")} Tu clase, tu momento →</button></aside></div></div>`;
       M.$("#prev").onclick = () => { week = new Date(week.getTime() - 7 * 864e5); render(); };
       M.$("#next").onclick = () => { week = new Date(week.getTime() + 7 * 864e5); render(); };
@@ -88,22 +89,23 @@
         app.innerHTML = `<h1>Estudiantes</h1>${sw}<div id="pf-root"></div>`; bindSw();
         return M.perfil.studentsBrowser(M.$("#pf-root"), { students: st, showTeacher: true });
       }
+      const isT = (p) => p.is_test || (st.find((s) => s.id === p.student_id) || {}).is_test, real = st.filter((s) => !s.is_test), pkR = pk.filter((p) => !isT(p)), nT = st.length - real.length;
       app.innerHTML = `<h1>Estudiantes y paquetes</h1>${sw}
         <div class="grid g4" style="margin-bottom:18px">
-          <div class="panel kpi"><b>${st.length}</b><span>Estudiantes</span></div>
-          <div class="panel kpi blue"><b>${st.reduce((a, s) => a + s.remaining.classes_remaining, 0)}</b><span>Clases por dictar (pagadas/vigentes)</span></div>
-          <div class="panel kpi red"><b>${st.filter((s) => !s.teacher_id).length}</b><span>Sin teacher asignado</span></div>
-          <div class="panel kpi"><b>${pk.filter((p) => p.payment_status === "pending").length}</b><span>Paquetes sin pagar (bloqueados)</span></div></div>
-        <div class="panel"><div class="table-wrap"><table><thead><tr><th>Estudiante</th><th>Programa</th><th>Nivel actual</th><th>Avance 160</th><th>Teacher</th><th>Clases restantes</th><th></th></tr></thead><tbody>
-        ${st.map((s) => `<tr><td><b>${M.esc(s.full_name)}</b><br><span class="muted small">${M.esc(s.email || "")}</span></td><td>${s.program}</td>
-          <td>${M.esc(s.level_name)}${s.current_sublevel ? "." + s.current_sublevel : " · Repaso"}<br><span class="muted small">próxima #${s.remaining.next_class_number}</span></td>
-          <td style="min-width:120px"><div class="bar"><i style="width:${((s.start_class_number - 1 + s.classes_completed) / 160) * 100}%"></i></div><span class="small muted">${s.start_class_number - 1 + s.classes_completed}/160</span></td>
+          <div class="panel kpi"><b>${real.length}</b><span>Estudiantes${nT ? ` <span class="muted small">(+${nT} de prueba, no cuentan)</span>` : ""}</span></div>
+          <div class="panel kpi blue"><b>${real.reduce((a, s) => a + ((s.remaining || {}).classes_remaining || 0), 0)}</b><span>Clases por dictar (pagadas/vigentes)</span></div>
+          <div class="panel kpi red"><b>${real.filter((s) => !s.teacher_id).length}</b><span>Sin teacher asignado</span></div>
+          <div class="panel kpi"><b>${pkR.filter((p) => p.payment_status === "pending").length}</b><span>Paquetes sin pagar (bloqueados)</span></div></div>
+        <div class="panel"><div class="table-wrap"><table><thead><tr><th>Estudiante</th><th>Programa</th><th>Nivel actual</th><th>Clases completadas</th><th>Teacher</th><th>Clases restantes</th><th></th></tr></thead><tbody>
+        ${st.map((s) => `<tr><td><b>${M.esc(s.full_name)}</b>${M.testBadge(s)}<br><span class="muted small">${M.esc(s.email || "")}</span></td><td>${s.program}</td>
+          <td>${s.level_name ? M.esc(s.level_name) + (s.current_sublevel ? "." + s.current_sublevel : " · Repaso") : '<span class="muted">Sin nivel</span>'}<br><span class="muted small">próxima: ${M.classLabel(s.remaining.next_class_number)}</span></td>
+          <td style="min-width:120px">${(() => { const d = (s.start_class_number || 1) - 1 + (s.classes_completed || 0), k = d % 32 || (d ? 32 : 0); return `<div class="bar"><i style="width:${(k / 32) * 100}%"></i></div><span class="small muted">${k}/32 del curso</span>`; })()}</td>
           <td><select data-assign="${s.id}"><option value="">— sin asignar —</option>${teachers.map((t) => `<option value="${t.id}" ${t.id === s.teacher_id ? "selected" : ""}>${M.esc(t.full_name)}</option>`).join("")}</select></td>
           <td><b style="font-size:1.2rem">${s.remaining.classes_remaining}</b> <span class="muted small">de ${s.remaining.classes_purchased}</span></td>
           <td><button class="btn sm" data-pkg="${s.id}">+ Paquete</button></td></tr>`).join("")}</tbody></table></div></div>
         <h2>Paquetes comprados</h2>
         <div class="panel"><div class="table-wrap"><table><thead><tr><th>Estudiante</th><th>Paquete</th><th>Usadas</th><th>Restantes</th><th>Compra</th><th>Vence</th><th>Pago</th><th>Próx. cobro (Zoho)</th></tr></thead><tbody>
-        ${pk.map((p) => `<tr><td>${M.esc((st.find((s) => s.id === p.student_id) || {}).full_name)}</td><td>${M.esc(p.package_code)} · ${p.classes_total} clases${p.amount_cop ? `<br><span class="muted small">${M.cop(p.amount_cop)}</span>` : ""}</td><td>${p.classes_used}</td><td><b>${p.classes_remaining}</b></td>
+        ${pk.map((p) => `<tr><td>${M.esc((st.find((s) => s.id === p.student_id) || {}).full_name)}${isT(p) ? M.testBadge({ is_test: true }) : ""}</td><td>${M.esc(p.package_code)} · ${p.classes_total} clases${p.amount_cop ? `<br><span class="muted small">${M.cop(p.amount_cop)}</span>` : ""}</td><td>${p.classes_used}</td><td><b>${p.classes_remaining}</b></td>
           <td>${M.fmtDate(p.purchase_date)}</td><td>${p.expiry_date ? M.fmtDate(p.expiry_date) : "—"}</td><td><select data-pay="${p.id}" style="min-width:120px">${Object.entries(M.PAY_LABEL).map(([k, v]) => `<option value="${k}" ${k === p.payment_status ? "selected" : ""}>${v}</option>`).join("")}</select>
           ${p.usable ? "" : `<br><span class="small" style="color:var(--warn)">No usable: ${p.payment_status === "pending" ? "pago pendiente" : p.payment_status === "refunded" || p.payment_status === "cancelled" ? "anulado" : "vencido"}</span>`}</td>
           <td>${p.next_billing_date ? M.fmtDate(p.next_billing_date) : '<span class="muted">—</span>'}</td></tr>`).join("") || '<tr><td colspan="8" class="muted">Sin paquetes</td></tr>'}</tbody></table></div></div>`;
@@ -165,12 +167,42 @@
     }
   };
 
+  /* Cargar datos: CSV con validador o formulario manual. Todo pasa por MEC.importar.validate antes de guardarse. */
+  let carEnt = "estudiantes";
+  async function cargarView() {
+    const I = M.importar, S = I.SCHEMAS, esc = M.esc, demo = api.mode === "demo";
+    const ctx = {}; for (const k of Object.keys(I.REFKEY)) ctx[k] = (await api.listImports(k)).map((r) => r[I.REFKEY[k]]);
+    try { if (demo) { ctx.teachers = ctx.teachers.concat((await api.listTeachers()).map((t) => (t.email || "").toLowerCase()).filter(Boolean));
+      ctx.estudiantes = ctx.estudiantes.concat((await api.listStudents()).map((s) => (s.email || "").toLowerCase()).filter(Boolean)); } } catch (e) { /* sin listas */ }
+    const staged = await api.listImports(carEnt), f = S[carEnt].fields;
+    app.innerHTML = `<h1>Cargar datos</h1><p class="muted">Sube un CSV o agrega filas a mano. Nada se guarda si el validador encuentra errores.${demo ? " Modo demo: se guarda solo en la zona de carga local del navegador." : " <b>La carga a producción aún no está habilitada</b>: puedes validar y descargar el CSV limpio."}</p>
+      <div class="panel"><label for="car-e">Tipo de datos</label><select id="car-e">${Object.entries(S).map(([k, v]) => `<option value="${k}" ${k === carEnt ? "selected" : ""}>${esc(v.label)}</option>`).join("")}</select>
+        <p class="small">Columnas: <code>${f.map((x) => esc(x.key) + (x.req ? "*" : "")).join(", ")}</code> · <a href="#" id="car-tpl">Descargar plantilla CSV</a></p></div>
+      <div class="panel"><h2>Desde CSV</h2><input type="file" id="car-f" accept=".csv,text/csv"><label for="car-t">…o pega el CSV</label><textarea id="car-t" rows="5" placeholder="${esc(I.template(carEnt).trim())}"></textarea>
+        <p><button class="btn" id="car-v">Validar</button> <button class="btn ok" id="car-ok" disabled>Guardar filas válidas</button> <button class="btn ghost" id="car-dl" disabled>Descargar CSV validado</button></p><div id="car-r" aria-live="polite"></div></div>
+      <div class="panel"><h2>Manual</h2><form id="car-m" novalidate><div class="row" style="flex-wrap:wrap">${f.map((x) => `<div style="flex:1 1 220px"><label for="cm-${x.key}">${esc(x.label)}${x.req ? " *" : ""}</label>${x.enum ? `<select id="cm-${x.key}" name="${x.key}"><option value="">—</option>${x.enum.map((o) => `<option>${esc(o)}</option>`).join("")}</select>` : `<input id="cm-${x.key}" name="${x.key}" ${x.type === "date" ? 'type="date"' : x.type === "int" ? 'inputmode="numeric"' : ""} ${x.max ? `maxlength="${x.max}"` : ""}>`}</div>`).join("")}</div>
+        <p><button class="btn" type="submit">Validar y agregar</button></p><div id="car-mr" aria-live="polite"></div></form></div>
+      <div class="panel"><h2>Zona de carga · ${esc(S[carEnt].label)} (${staged.length})</h2>${staged.length ? `<div class="sol-tw"><table class="tbl"><tr>${f.map((x) => `<th>${esc(x.key)}</th>`).join("")}</tr>${staged.map((r) => `<tr>${f.map((x) => `<td>${esc(r[x.key] == null ? "" : r[x.key])}</td>`).join("")}</tr>`).join("")}</table></div><p><button class="btn ghost" id="car-clr">Vaciar zona de carga</button></p>` : '<p class="muted">Sin filas cargadas.</p>'}</div>`;
+    let last = null;
+    const report = (el, v) => { el.innerHTML = v.errors.length ? `<div class="alert err"><b>${v.errors.length} error(es). No se guardó nada.</b><ul>${v.errors.slice(0, 50).map((e) => `<li>${e.row ? "Fila " + e.row : "Encabezado"}${e.field ? " · " + esc(e.field) : ""}: ${esc(e.msg)}</li>`).join("")}</ul></div>` : `<div class="alert ok">${v.rows.length} fila(s) válidas.</div>`; };
+    const dl = (name, text) => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["\uFEFF" + text], { type: "text/csv" })); a.download = name; a.click(); };
+    const toCsv = (rows) => I.template(carEnt) + rows.map((r) => f.map((x) => { const v = r[x.key] == null ? "" : String(r[x.key]); return /[",;\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v; }).join(",")).join("\n") + "\n";
+    M.$("#car-e").onchange = (e) => { carEnt = e.target.value; render(); };
+    M.$("#car-tpl").onclick = (e) => { e.preventDefault(); dl(`plantilla-${carEnt}.csv`, I.template(carEnt)); };
+    M.$("#car-f").onchange = async (e) => { const file = e.target.files[0]; if (!file) return; if (file.size > 2e6) return M.toast("Archivo demasiado grande (máx. 2 MB)"); M.$("#car-t").value = await file.text(); };
+    M.$("#car-v").onclick = () => { last = I.validate(carEnt, I.parseCSV(M.$("#car-t").value), ctx); report(M.$("#car-r"), last); M.$("#car-ok").disabled = !last.ok || !demo; M.$("#car-dl").disabled = !last.ok; };
+    M.$("#car-dl").onclick = () => last && last.ok && dl(`${carEnt}-validado.csv`, toCsv(last.rows));
+    M.$("#car-ok").onclick = M.wrapErr(async () => { if (!last || !last.ok) return; const n = await api.saveImport(carEnt, last.rows); M.toast(n + " fila(s) guardadas en la zona de carga"); render(); });
+    M.$("#car-m").onsubmit = M.wrapErr(async (e) => { e.preventDefault(); const raw = {}; f.forEach((x) => (raw[x.key] = M.$("#cm-" + x.key).value));
+      const v = I.validate(carEnt, [raw], ctx); report(M.$("#car-mr"), v); if (!v.ok) return; await api.saveImport(carEnt, v.rows); M.toast("Fila agregada"); render(); });
+    const clr = M.$("#car-clr"); if (clr) clr.onclick = M.wrapErr(async () => { await api.clearImports(carEnt); render(); });
+  }
   function newClass(slot, teachers, students) {
     M.modal(`<h2>Agendar clase</h2><p class="muted">${M.fmtDateTime(slot)}</p>
-      <label>Estudiante</label><select id="ns">${students.map((s) => `<option value="${s.id}">${M.esc(s.full_name)} · próxima #${s.remaining.next_class_number}</option>`).join("")}</select>
+      <label>Estudiante</label><select id="ns">${students.map((s) => `<option value="${s.id}">${M.esc(s.full_name)} · próxima: ${M.classLabel(s.remaining.next_class_number)}</option>`).join("")}</select>
       <label>Teacher</label><select id="nt">${teachers.map((t) => `<option value="${t.id}" ${t.id === teacherFilter ? "selected" : ""}>${M.esc(t.full_name)}</option>`).join("")}</select>
-      <label>Tipo</label><select id="nk"><option value="program">Clase del programa (cuenta en las 160)</option><option value="extra">Sesión de refuerzo extra (fuera de las 160)</option></select>
-      <label>Número de clase (1-160)</label><input id="nn" type="number" min="1" max="160">
+      <label>Tipo</label><select id="nk"><option value="program">Clase del curso (cuenta en las 32 del nivel)</option><option value="extra">Sesión de refuerzo extra (no cuenta en el curso)</option></select>
+      <label>Número interno de clase (1-160; se muestra como clase 1-32 del curso de nivel)</label><input id="nn" type="number" min="1" max="160">
       <p class="small muted" id="ninfo"></p>
       <label>Enlace Meet (opcional, si no: el fijo del teacher)</label><input id="nm" placeholder="https://meet.google.com/...">
       <p style="margin-top:16px"><button class="btn" id="ok">Agendar</button> <button class="btn ghost" onclick="MEC.closeModal()">Cancelar</button></p>`, () => {

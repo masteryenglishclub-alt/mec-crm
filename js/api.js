@@ -158,6 +158,12 @@
       async saveTeacherPersonal(tid, o) { if (!(role() === "teacher" && me().id === tid)) throw new Error("Solo el teacher puede editar su propio perfil.");
         const old = (db.teacher_profiles || {})[tid]; if (!old) throw new Error("Tu perfil público aún no existe: créalo primero en «Mi perfil» del CRM.");
         db.teacher_profiles[tid] = Object.assign({}, old, o, { teacher_id: tid, published: old.published }); save(); return { saved: Object.keys(o), pending: [] }; },
+      /* Cargar datos (admin): en DEMO se guarda en una zona de carga local (db.imports), nunca en tablas operativas ni en producción. */
+      async listImports(entity) { need("admin"); return ((db.imports || {})[entity] || []).slice(); },
+      async saveImport(entity, rows) { need("admin"); db.imports = db.imports || {}; db.imports[entity] = (db.imports[entity] || []).concat(rows); save(); return rows.length; },
+      async clearImports(entity) { need("admin"); if (db.imports) delete db.imports[entity]; save(); },
+      async listBookUnits() { return []; },
+      async bookFileUrl() { throw new Error("En modo demo no hay PDF de libros."); },
       async getTeacherProfile(tid) { const t = (db.teacher_profiles || {})[tid]; return t && (t.published || tid === me().id || role() === "admin") ? Object.assign({}, t) : null; },
       async saveTeacherProfile(tid, o) {
         need("admin", "teacher"); if (role() === "teacher" && tid !== me().id) throw new Error("Permiso denegado");
@@ -380,8 +386,10 @@
         const [st, rem, pr] = await Promise.all([q(c.from("students").select("*")), q(c.from("student_remaining_classes").select("*")), q(c.from("student_progress").select("*"))]);
         const ids = [...new Set(st.map((s) => s.teacher_id).filter(Boolean))];
         const tp = ids.length ? await q(c.from("profiles").select("id, full_name").in("id", ids)) : [];
-        return st.map((s) => { const p = pr.find((x) => x.student_id === s.id) || {};
-          return Object.assign({}, s, { full_name: p.full_name, level_name: p.level_name, teacher_name: (tp.find((t) => t.id === s.teacher_id) || {}).full_name, remaining: rem.find((x) => x.student_id === s.id) }); });
+        // is_test (cuentas de prueba) y nombre aunque el estudiante no tenga nivel (student_progress hace join con level_names)
+        const sp = st.length ? await q(c.from("profiles").select("id, full_name, is_test").in("id", st.map((s) => s.id))).catch(() => q(c.from("profiles").select("id, full_name").in("id", st.map((s) => s.id))).catch(() => [])) : [];
+        return st.map((s) => { const p = pr.find((x) => x.student_id === s.id) || {}, o = sp.find((x) => x.id === s.id) || {};
+          return Object.assign({}, s, { is_test: !!o.is_test, full_name: p.full_name || o.full_name, level_name: p.level_name, teacher_name: (tp.find((t) => t.id === s.teacher_id) || {}).full_name, remaining: rem.find((x) => x.student_id === s.id) || { student_id: s.id, classes_purchased: 0, classes_used: 0, classes_remaining: 0, next_class_number: Math.min(160, (s.start_class_number || 1) + (s.classes_completed || 0)), no_package: true } }); });
       },
       async listTeachers() {
         const c = await client(); const ts = await q(c.from("teachers").select("id, meet_url, teacher_availability(weekday,start_hour,end_hour)"));
@@ -410,13 +418,23 @@
           if (error) { if (/column|schema cache|PGRST204|42703/i.test(`${error.code} ${error.message}`)) { if (hasExtra) res.pending = Object.keys(extra); } else throw new Error(error.message); }
           else res.saved.push(...Object.keys(extra)); }
         return res; },
+      /* Cargar datos: la carga real a producción NO está habilitada (requiere migraciones aprobadas e invitaciones de cuentas). */
+      async listImports() { return []; },
+      async saveImport() { throw new Error("La carga a producción aún no está habilitada: falta aprobar la migración de cobros y crear las cuentas por invitación. Descarga el CSV validado y guárdalo."); },
+      async clearImports() {},
+      /* Material por nivel: book_units y bucket privado 'materiales' (RLS por nivel). URL firmada de 10 minutos. */
+      async listBookUnits() { const c = await client(); return q(c.from("book_units").select("book_slug, label, page_start, page_end, sort_order").order("sort_order")); },
+      async bookFileUrl(path) { const c = await client(); const { data, error } = await c.storage.from("materiales").createSignedUrl(path, 600);
+        if (error || !data) throw new Error("No tienes acceso a este material o aún no está disponible."); return data.signedUrl; },
       async getTeacherProfile(tid) { const c = await client(); const r = await q(c.from("teacher_public_profiles").select("*").eq("teacher_id", tid)); return r[0] || null; },
       async saveTeacherProfile(tid, o) { const c = await client(); await q(c.from("teacher_public_profiles").upsert(Object.assign({}, o, { teacher_id: tid }), { onConflict: "teacher_id" })); },
       async saveStudentProfile(sid, o) { const c = await client(); await q(c.from("student_profiles").upsert(Object.assign({}, o, { student_id: sid }), { onConflict: "student_id" })); },
       async getStudentProfile(sid) { const c = await client(); const r = await q(c.from("student_profiles").select("*").eq("student_id", sid)); return r[0] || null; },
       async getInternalNote(sid) { const c = await client(); const r = await q(c.from("student_internal_notes").select("notes, interests, learning_style, updated_at").eq("student_id", sid)); return r[0] || null; },
       async listTeacherProfiles() { const c = await client(); return q(c.from("teacher_public_profiles").select("*").order("display_name")); },
-      async listStudentPackages(sid) { const c = await client(); let r = c.from("student_package_balance").select("*").order("purchase_date"); if (sid) r = r.eq("student_id", sid); return q(r); },
+      async listStudentPackages(sid) { const c = await client(); let r = c.from("student_package_balance").select("*").order("purchase_date"); if (sid) r = r.eq("student_id", sid); const rows = await q(r);
+        const t = rows.length ? await q(c.from("student_packages").select("id, is_test").in("id", rows.map((p) => p.id))).catch(() => []) : [];
+        return rows.map((p) => Object.assign(p, { is_test: !!(p.is_test || (t.find((x) => x.id === p.id) || {}).is_test) })); },
       async createClass(o) {
         const c = await client(); const n = o.class_number ? +o.class_number : null; const me = await this.currentUser();
         return q(c.from("classes").insert({ student_id: o.student_id, teacher_id: o.teacher_id, starts_at: new Date(o.starts_at).toISOString(), class_number: n,
