@@ -87,6 +87,18 @@
   M.KIND_LABEL = { personal: "Personalizada", grupal: "Grupal", club: "CLUB" };
   M.kindChip = (c) => { const k = M.classKind(c); return `<span class="sp-kind k-${k}">${M.KIND_LABEL[k]}</span>`; };
   M.kindLegend = () => `<p class="sp-leyenda" aria-label="Tipos de clase">${["personal", "grupal", "club"].map((k) => `<span class="sp-kind k-${k}">${M.KIND_LABEL[k]}</span>`).join("")}<span class="sp-small">CLUB = sesión de conversación en grupo</span></p>`;
+  /** Ingreso con USUARIO (sin "@"): se convierte en un correo sintético <usuario>@LOGIN_DOMAIN, sin distinguir mayúsculas.
+   *  Con "@" se usa el correo tal cual (en minúsculas): el resto de cuentas sigue entrando con su correo.
+   *  Dominio: el subdominio de GitHub Pages de MEC (controlado por la cuenta de MEC y sin buzón: nunca recibe correo). */
+  M.LOGIN_DOMAIN = "masteryenglishclub-alt.github.io";
+  M.isUsername = (v) => !String(v || "").includes("@");
+  M.loginEmail = (v) => { const t = String(v || "").trim().toLowerCase();
+    if (!t) throw new Error("Escribe tu correo o tu usuario");
+    if (t.includes("@")) return t;
+    if (!/^[a-z0-9][a-z0-9._-]{2,39}$/.test(t)) throw new Error("Usuario no válido: usa solo letras, números, punto, guion o guion bajo");
+    return t + "@" + M.LOGIN_DOMAIN; };
+  /** Insignia de paquete que no cuenta en ingresos (student_packages.excluded_from_revenue, propuesta 20261017). */
+  M.revenueBadge = (p) => p && p.excluded_from_revenue ? ' <span class="tag" title="Paquete excluido de ingresos y reportes (p. ej. cortesía o ya contabilizado)">No cuenta en ingresos</span>' : "";
   /** Información de una clase (número interno 1-160) */
   /** Insignia para cuentas de prueba (profiles.is_test): no cuentan en ingresos, reportes ni conteos. */
   M.testBadge = (s) => s && s.is_test ? ' <span class="tag" title="No cuenta en ingresos, reportes ni conteos">Cuenta de prueba</span>' : "";

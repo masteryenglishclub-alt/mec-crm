@@ -59,7 +59,7 @@
         app.innerHTML = `<h1>Estudiantes</h1>${sw}<div id="pf-root"></div>`; bindSw();
         return M.perfil.studentsBrowser(M.$("#pf-root"), { students: st, showTeacher: true });
       }
-      const isT = (p) => p.is_test || (st.find((s) => s.id === p.student_id) || {}).is_test, real = st.filter((s) => !s.is_test), pkR = pk.filter((p) => !isT(p)), nT = st.length - real.length;
+      const isT = (p) => p.is_test || (st.find((s) => s.id === p.student_id) || {}).is_test, real = st.filter((s) => !s.is_test), pkR = pk.filter((p) => !isT(p) && !p.excluded_from_revenue), nT = st.length - real.length;
       app.innerHTML = `<h1>Estudiantes y paquetes</h1>${sw}
         <div class="grid g4" style="margin-bottom:18px">
           <div class="panel kpi"><b>${real.length}</b><span>Estudiantes${nT ? ` <span class="muted small">(+${nT} de prueba, no cuentan)</span>` : ""}</span></div>
@@ -75,7 +75,7 @@
           <td><button class="btn sm" data-pkg="${s.id}">+ Paquete</button></td></tr>`).join("")}</tbody></table></div></div>
         <h2>Paquetes comprados</h2>
         <div class="panel"><div class="table-wrap"><table><thead><tr><th>Estudiante</th><th>Paquete</th><th>Usadas</th><th>Restantes</th><th>Compra</th><th>Vence</th><th>Pago</th><th>Próx. cobro (Zoho)</th></tr></thead><tbody>
-        ${pk.map((p) => `<tr><td>${M.esc((st.find((s) => s.id === p.student_id) || {}).full_name)}${isT(p) ? M.testBadge({ is_test: true }) : ""}</td><td>${M.esc(p.package_code)} · ${p.classes_total} clases${p.amount_cop ? `<br><span class="muted small">${M.cop(p.amount_cop)}</span>` : ""}</td><td>${p.classes_used}</td><td><b>${p.classes_remaining}</b></td>
+        ${pk.map((p) => `<tr><td>${M.esc((st.find((s) => s.id === p.student_id) || {}).full_name)}${isT(p) ? M.testBadge({ is_test: true }) : ""}${M.revenueBadge ? M.revenueBadge(p) : ""}</td><td>${M.esc(p.package_code)} · ${p.classes_total} clases${p.amount_cop ? `<br><span class="muted small">${M.cop(p.amount_cop)}</span>` : ""}</td><td>${p.classes_used}</td><td><b>${p.classes_remaining}</b></td>
           <td>${M.fmtDate(p.purchase_date)}</td><td>${p.expiry_date ? M.fmtDate(p.expiry_date) : "—"}</td><td><select data-pay="${p.id}" style="min-width:120px">${Object.entries(M.PAY_LABEL).map(([k, v]) => `<option value="${k}" ${k === p.payment_status ? "selected" : ""}>${v}</option>`).join("")}</select>
           ${p.usable ? "" : `<br><span class="small" style="color:var(--warn)">No usable: ${p.payment_status === "pending" ? "pago pendiente" : p.payment_status === "refunded" || p.payment_status === "cancelled" ? "anulado" : "vencido"}</span>`}</td>
           <td>${p.next_billing_date ? M.fmtDate(p.next_billing_date) : '<span class="muted">—</span>'}</td></tr>`).join("") || '<tr><td colspan="8" class="muted">Sin paquetes</td></tr>'}</tbody></table></div></div>`;
