@@ -124,3 +124,5 @@ body.crm-n{overflow-x:hidden}
 /* v4b: el puerto cubre todo lo que queda bajo el hero (cover proporcional, sin franja repetida) */
 .agv::before{bottom:0;height:auto;background-size:cover;background-position:center top}
 .agv::after{content:none}
+/* móvil/tablet: la cuadrícula se desplaza dentro de su panel (sin desbordar la página) */
+@media (max-width:1060px){.agv-wrap{grid-template-columns:minmax(0,1fr)}.agv-main,.agv-side{min-width:0}}
