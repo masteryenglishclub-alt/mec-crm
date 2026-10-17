@@ -126,3 +126,10 @@ body.crm-n{overflow-x:hidden}
 .agv::after{content:none}
 /* móvil/tablet: la cuadrícula se desplaza dentro de su panel (sin desbordar la página) */
 @media (max-width:1060px){.agv-wrap{grid-template-columns:minmax(0,1fr)}.agv-main,.agv-side{min-width:0}}
+
+/* Franjas de disponibilidad por teacher (Calendario): tiras verticales de su color, lado a lado si se solapan; el bloque libre sigue siendo dorado al pasar */
+.agv-celda{position:relative}.agv-bands{position:absolute;inset:3px 3px auto auto;bottom:3px;display:flex;gap:2px;pointer-events:none}
+.agv-bands i{display:block;width:6px;border-radius:3px;background:var(--tc);opacity:.85;box-shadow:0 0 0 1px #0b1522}
+.agv-celda.agv-conb.off .agv-bands i{opacity:.35}
+.agv-ley-t{margin-top:-4px}.agv-ley-t i{border-color:#0b1522}
+@media (max-width:700px){.agv-bands i{width:4px}}

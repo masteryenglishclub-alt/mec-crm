@@ -38,7 +38,7 @@
 .sp-teacher h2{font:800 1.5rem var(--display);margin:0;border:0;padding:0;color:#fff}
 .sp-rol{margin:0 0 6px;color:var(--c);font-weight:800;text-transform:uppercase;font-size:.78rem;letter-spacing:.1em;filter:brightness(1.4)}
 .sp-teacher h3{font:800 .8rem var(--display);color:#f0c46a;margin:12px 0 4px;text-transform:uppercase}
-.sp-teacher ul{margin:0;padding-left:18px}.sp-bio-t{margin:0;font-style:italic;color:#d6dee8}
+.sp-teacher ul{margin:0;padding-left:18px}.sp-bio-t{margin:0;font-style:italic;color:#d6dee8;white-space:pre-line}
 .sp-tcols{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
 .sp-btn.tcolor{background:var(--c);border-color:var(--c);margin-top:12px}
 @media (max-width:640px){.sp-bio,.sp-tcols{grid-template-columns:1fr}.sp-teachers,.sp-grid{grid-template-columns:1fr}.sp-estilo{flex-direction:column;align-items:flex-start}.sp-tabs{flex-wrap:nowrap;overflow-x:auto}}
