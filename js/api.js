@@ -45,6 +45,15 @@
         passes_total: pt, passes_used: pu, passes_remaining: Math.max(0, pt - pu), payment_blocked: u === 0 && pend.length > 0, passes_period_start: pp.start, passes_period_end: pp.end,
         free_passes_per_period: set("free_passes_per_period"), pass_period_months: set("pass_period_months"), late_cancel_hours: set("late_cancel_hours"), min_request_hours: set("min_request_hours") };
     }
+    // Igual que public.student_credits_by_type() (propuesta): saldo por tipo = compradas - consumidas/agendadas - solicitudes pendientes
+    function typeCredits(sid) {
+      const pk = activePkgs(sid), ids = pk.map((p) => p.id), sum = (f) => pk.reduce((x, p) => x + f(p), 0);
+      const pt = sum((p) => p.personal_total ?? (p.group_total ? 0 : p.classes_total)), gt = sum((p) => p.group_total || 0);
+      const mine = db.classes.filter((c) => c.student_id === sid && c.class_type !== "extra_reinforcement" && ((c.status === "completed" && ids.includes(c.student_package_id)) || (c.late_penalty === "class_deducted" && ids.includes(c.penalty_package_id)) || c.status === "scheduled"));
+      const rq = db.requests.filter((r) => r.student_id === sid && r.status === "pending");
+      const n = (arr, g) => arr.filter((x) => (x.modality === "group") === g).length;
+      return { personal_left: Math.max(0, pt - n(mine, false) - n(rq, false)), group_left: Math.max(0, gt - n(mine, true) - n(rq, true)) };
+    }
     function noCredit(sid, action) {
       const c = credits(sid);
       if (c.pending_payment_classes > 0) throw new Error(`PAGO PENDIENTE: el paquete ${c.pending_payment_codes} tiene el pago pendiente y no se puede usar. No es posible ${action} hasta que el admin confirme el pago.`);
@@ -182,7 +191,7 @@
       },
       async createClass(o) {
         need("admin", "teacher");
-        if (role() === "teacher" && o.class_type !== "extra_reinforcement") throw new Error("Permiso denegado: solo el admin agenda clases del programa");
+        if (role() === "teacher" && o.class_type !== "extra_reinforcement") throw new Error("Permiso denegado: solo el admin agenda clases de los cursos");
         const start = new Date(o.starts_at), iso = start.toISOString();
         if (!M.isValidSlot(start)) throw new Error("Fuera del horario de clases (L-V 6:00-18:00, sáb 10:00-16:00, hora Bogotá, en punto)");
         const t = teach(o.teacher_id), p = M.bog(start);
@@ -195,7 +204,7 @@
         if (n && n <= s.start_class_number - 1 + s.classes_completed) throw new Error(`La clase #${n} ya fue completada`);
         if (n && db.classes.some((c) => c.student_id === s.id && c.class_number === n && ["scheduled", "completed"].includes(c.status))) throw new Error(`La clase #${n} ya está agendada`);
         const c = { id: "c-" + Date.now(), student_id: o.student_id, teacher_id: o.teacher_id, starts_at: iso, class_number: n,
-          class_type: n ? M.classInfo(n).type : "extra_reinforcement", status: "scheduled", meet_url: o.meet_url || null };
+          class_type: n ? M.classInfo(n).type : "extra_reinforcement", status: "scheduled", meet_url: o.meet_url || null, modality: "individual", session_kind: "personalizada" };
         db.classes.push(c); save(); return c;
       },
       async setClassStatus(id, status) {
@@ -236,6 +245,12 @@
       async bookingStatus(sid) { const u = me(); sid = sid || u.id; if (!visibleStudents().some((s) => s.id === sid)) throw new Error("Permiso denegado"); return credits(sid); },
       async settings() { return Object.assign({}, db.settings); },
       async setSetting(k, v) { need("admin"); db.settings[k] = +v; save(); },
+      /* Calendario del estudiante (PROPUESTA 20261016_calendario_estudiante): todos los teachers activos, ocupados SIN identidad. */
+      async calendarTeachers() { return db.teachers.filter((t) => t.active !== false).map((t) => ({ id: t.id, full_name: prof(t.id).full_name, availability: t.availability })); },
+      async calendarBusy(from, to) { const u = me();
+        return db.classes.filter((c) => c.status !== "cancelled" && c.starts_at >= from && c.starts_at < to && teach(c.teacher_id))
+          .map((c) => ({ teacher_id: c.teacher_id, starts_at: c.starts_at, modality: c.modality || "individual", mine: c.student_id === u.id })); },
+      async creditsByType(sid) { sid = sid || me().id; return typeCredits(sid); },
       async teacherCalendar(tid, from, to) { // estudiante: solo bloques ocupados de SU teacher, sin nombres
         const u = me(); if (u.role === "student" && stu(u.id).teacher_id !== tid) return { availability: [], busy: [] };
         if (u.role === "teacher" && u.id !== tid) return { availability: [], busy: [] };
@@ -256,15 +271,18 @@
       },
       async createRequest(o) {
         need("student"); const u = me(), s = stu(u.id), start = new Date(o.starts_at), iso = start.toISOString();
-        if (!s.teacher_id) throw new Error("Aún no tienes teacher asignado: el admin debe asignarlo antes de solicitar clases");
+        const tid = o.teacher_id || s.teacher_id, mod = o.modality === "group" ? "group" : "individual";
+        if (!tid) throw new Error("Elige un teacher para tu clase");
+        if (!teach(tid) || teach(tid).active === false) throw new Error("Ese teacher no está disponible");
         if (!M.isValidSlot(start)) throw new Error("Fuera del horario de clases (L-V 6:00-18:00, sáb 10:00-16:00, hora Bogotá, bloques de 60 min)");
         if (start - Date.now() < set("min_request_hours") * 3600e3) throw new Error(`Las solicitudes se hacen con al menos ${set("min_request_hours")} horas de anticipación`);
-        checkAvail(s.teacher_id, start, "Tu teacher");
-        if (busyAt(db.classes.filter((c) => c.teacher_id === s.teacher_id), start)) throw new Error("Ese bloque ya está ocupado en el calendario de tu teacher");
+        checkAvail(tid, start, "Ese teacher");
+        if (busyAt(db.classes.filter((c) => c.teacher_id === tid), start)) throw new Error("Ese bloque ya está ocupado en el calendario de ese teacher");
         if (busyAt(db.classes.filter((c) => c.student_id === u.id), start)) throw new Error("Ya tienes una clase en ese bloque");
         if (db.requests.some((r) => r.student_id === u.id && r.status === "pending" && r.starts_at === iso)) throw new Error("Ya enviaste una solicitud para ese bloque");
         if (credits(u.id).available_to_request < 1) noCredit(u.id, "solicitar clases");
-        const r = { id: "r-" + Date.now(), student_id: u.id, teacher_id: s.teacher_id, starts_at: iso, status: "pending", student_note: o.note || null, created_at: today() };
+        const tc = typeCredits(u.id); if ((mod === "group" ? tc.group_left : tc.personal_left) < 1) throw new Error(`No te quedan clases ${mod === "group" ? "grupales" : "personalizadas"} en tu paquete`);
+        const r = { id: "r-" + Date.now(), student_id: u.id, teacher_id: tid, modality: mod, starts_at: iso, status: "pending", student_note: o.note || null, created_at: today() };
         db.requests.push(r); save(); return r;
       },
       async approveRequest(id, note) {
@@ -280,7 +298,8 @@
         const s = stu(r.student_id); let n = s.start_class_number + s.classes_completed;
         while (db.classes.some((c) => c.student_id === s.id && c.class_number === n && ["scheduled", "completed"].includes(c.status))) n++;
         const c = { id: "c-" + Date.now(), student_id: r.student_id, teacher_id: r.teacher_id, starts_at: r.starts_at, class_number: n, class_type: M.classInfo(n).type,
-          status: "scheduled", meet_url: null, request_id: r.id, late_penalty: "none" };
+          status: "scheduled", meet_url: null, request_id: r.id, late_penalty: "none", modality: r.modality || "individual" };
+        c.session_kind = c.modality === "group" ? (c.class_type === "conversation_lab" ? "club" : "grupal") : "personalizada";
         db.classes.push(c);
         Object.assign(r, { status: "approved", class_id: c.id, decided_by: u.id, decided_at: today(), decision_note: note || null });
         db.requests.filter((x) => x.status === "pending" && x.teacher_id === r.teacher_id && x.starts_at === r.starts_at)
@@ -348,7 +367,7 @@
     };
     const q = async (p) => { const { data, error } = await p; if (error) throw new Error(error.message); return data; };
     return {
-      mode: "supabase",
+      mode: "supabase", _client: client,  // lo usan js/espacio.js (Mi espacio, Moderación, Noticias)
       async currentUser() {
         if (meCache) return meCache;
         const c = await client(); const { data } = await c.auth.getUser(); if (!data.user) return null;
@@ -491,7 +510,22 @@
           competing: rows.filter((y) => y.id !== x.id && y.status === "pending" && y.teacher_id === x.teacher_id && y.starts_at === x.starts_at).length }));
       },
       async createRequest(o) { const c = await client(); const me = await this.currentUser();
-        return q(c.from("class_requests").insert({ student_id: me.id, starts_at: new Date(o.starts_at).toISOString(), student_note: o.note || null }).select().single()); },
+        const row = { student_id: me.id, starts_at: new Date(o.starts_at).toISOString(), student_note: o.note || null };
+        if (o.teacher_id) row.teacher_id = o.teacher_id;           // otro teacher: requiere la PROPUESTA calendario_estudiante
+        if (o.modality === "group") row.modality = "group";        // columna nueva de la misma PROPUESTA
+        return q(c.from("class_requests").insert(row).select().single()); },
+      /* Calendario del estudiante. Con la PROPUESTA aplicada: todos los teachers (RPC sin identidad). Sin ella: solo su teacher (teacher_busy_slots). */
+      async calendarTeachers() { const c = await client();
+        const [tp, mine, av] = await Promise.all([q(c.from("teacher_public_profiles").select("teacher_id, display_name, color").eq("published", true)).catch(() => []),
+          this.listTeachers().catch(() => []), q(c.from("teacher_availability").select("teacher_id, weekday, start_hour, end_hour")).catch(() => [])]);
+        const m = new Map(); tp.forEach((t) => m.set(t.teacher_id, { id: t.teacher_id, full_name: t.display_name })); mine.forEach((t) => m.has(t.id) || m.set(t.id, { id: t.id, full_name: t.full_name }));
+        return [...m.values()].map((t) => Object.assign(t, { availability: av.filter((a) => a.teacher_id === t.id).map((a) => [a.weekday, a.start_hour, a.end_hour]) })); },
+      async calendarBusy(from, to) { const c = await client();
+        try { return (await q(c.rpc("calendar_busy_slots", { p_from: from, p_to: to }))).map((b) => ({ teacher_id: b.teacher_id, starts_at: new Date(b.starts_at).toISOString(), modality: b.modality, mine: b.mine })); }
+        catch (e) { const t = (await this.listTeachers())[0]; if (!t) return [];
+          return (await q(c.rpc("teacher_busy_slots", { p_teacher: t.id, p_from: from, p_to: to }))).map((b) => ({ teacher_id: t.id, starts_at: new Date(b.starts_at).toISOString(), modality: "individual", mine: false })); } },
+      async creditsByType(sid) { const c = await client(); const me = await this.currentUser();
+        try { const r = await q(c.rpc("student_credits_by_type", { p_student: sid || me.id })); return r[0] || null; } catch (e) { return null; } },
       async approveRequest(id, note) { const c = await client(); return q(c.rpc("approve_class_request", { p_request: id, p_note: note || null })); },
       async rejectRequest(id, note) { const c = await client(); return q(c.rpc("reject_class_request", { p_request: id, p_note: note || null })); },
       async cancelRequest(id) { const c = await client(); return q(c.rpc("cancel_class_request", { p_request: id })); },

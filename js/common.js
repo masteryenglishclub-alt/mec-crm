@@ -73,6 +73,20 @@
 
   /** Etiqueta visible por curso de nivel (cada nivel es un curso independiente de 32 clases). n es el número interno 1-160. */
   M.classLabel = (n) => n ? `${M.LEVELS[Math.floor((n - 1) / 32)]} · clase ${((n - 1) % 32) + 1}/32` : "Refuerzo";
+  /** Código visible de la clase: nivel.subnivel.clase (A1.1.4); repasos A1.R1/A1.R2; refuerzo sin número. */
+  M.classCode = (n) => { if (!n) return "Refuerzo"; const p = ((n - 1) % 32) + 1, l = M.LEVELS[Math.floor((n - 1) / 32)];
+    return p > 30 ? `${l}.R${p - 30}` : `${l}.${Math.floor((p - 1) / 6) + 1}.${((p - 1) % 6) + 1}`; };
+  /** Tema de la clase (títulos del pensum en js/temas.js; si no hay, el tipo de clase). */
+  M.classTopic = (n, program) => { if (!n) return "Sesión de refuerzo"; const t = window.MEC_TEMAS && (window.MEC_TEMAS[program || "adultos"] || [])[n - 1];
+    if (t) return t; const p = ((n - 1) % 32) + 1, k = ((p - 1) % 6) + 1; return p > 30 ? "Repaso" : k <= 4 ? "Clase " + k : k === 5 ? "Practice Studio" : "Conversation Lab"; };
+  M.classCodeTopic = (n, program) => `${M.classCode(n)} · ${M.classTopic(n, program)}`;
+  /** Tipo visible de una clase: usa classes.session_kind (personalizada | grupal | club, propuesta 20261016_tipo_clase) y,
+   *  mientras no exista, lo deduce igual que el relleno: grupal + Conversation Lab = CLUB, grupal = Grupal, individual = Personalizada. */
+  M.classKind = (c) => { const k = c && c.session_kind; if (k) return k === "personalizada" ? "personal" : k;
+    return c.modality === "group" ? (c.class_type === "conversation_lab" ? "club" : "grupal") : "personal"; };
+  M.KIND_LABEL = { personal: "Personalizada", grupal: "Grupal", club: "CLUB" };
+  M.kindChip = (c) => { const k = M.classKind(c); return `<span class="sp-kind k-${k}">${M.KIND_LABEL[k]}</span>`; };
+  M.kindLegend = () => `<p class="sp-leyenda" aria-label="Tipos de clase">${["personal", "grupal", "club"].map((k) => `<span class="sp-kind k-${k}">${M.KIND_LABEL[k]}</span>`).join("")}<span class="sp-small">CLUB = sesión de conversación en grupo</span></p>`;
   /** Información de una clase (número interno 1-160) */
   /** Insignia para cuentas de prueba (profiles.is_test): no cuentan en ingresos, reportes ni conteos. */
   M.testBadge = (s) => s && s.is_test ? ' <span class="tag" title="No cuenta en ingresos, reportes ni conteos">Cuenta de prueba</span>' : "";

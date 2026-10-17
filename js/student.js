@@ -2,15 +2,18 @@
 (async () => {
   const M = MEC, api = M.api, app = M.$("#app");
   const me = await M.requireRole("student");
-  let tab = "inicio";
-  let week = M.weekStart(new Date(Date.now() + 864e5 * 7));  // semana siguiente por defecto
-  if (location.hash === "#solicitar") tab = "solicitar";
-  else if (location.hash === "#clases" || location.hash === "#teachers") tab = location.hash.slice(1);
+  let tab = "inicio", calFocus = null, fbSelect = null;
+  let week = M.weekStart(new Date(Date.now() + 864e5 * 7)), calFilter = "";  // semana siguiente por defecto
+  const TABS = [["inicio", "Inicio"], ["solicitar", "Calendario"], ["noticias", "Noticias y eventos"], ["espacio", "Mi espacio"], ["teachers", "Teachers"], ["feedback", "Feedback"], ["material", "Material"]];
+  const fromHash = () => { const h = location.hash.slice(1), t = h.split("/")[0]; return TABS.some((x) => x[0] === t) ? t : null; };
+  tab = fromHash() || "inicio";
   const goTab = (t) => { tab = t; M.$$("[data-tab]").forEach((b) => b.classList.toggle("on", b.dataset.tab === t)); render(); };
-  window.addEventListener("hashchange", () => { const h = location.hash.slice(1); if (["solicitar", "clases", "teachers"].includes(h) && h !== tab) goTab(h); });
-  M.header(me, [["inicio", "Inicio"], ["solicitar", "Solicitar clase"], ["camino", "Mi camino"], ["clases", "Mis clases"], ["teachers", "Teachers"], ["feedback", "Feedback"], ["libros", "Libros"]], (t) => { tab = t; render(); });
+  window.addEventListener("hashchange", () => { const t = fromHash(); if (!t) return;
+    if (t === "feedback" && tab === "feedback" && fbSelect) { const id = decodeURIComponent(location.hash.split("/")[1] || ""); if (id) return fbSelect(id); }
+    if (t !== tab) goTab(t); });
+  M.header(me, TABS, (t) => { tab = t; if (location.hash) history.replaceState(null, "", location.pathname + location.search); render(); });
   M.$$("[data-tab]").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab));
-  const render = M.wrapErr(async () => { app.innerHTML = '<p class="muted">Cargando…</p>'; await views[tab](); });
+  const render = M.wrapErr(async () => { fbSelect = null; app.innerHTML = '<p class="muted">Cargando…</p>'; await views[tab](); });
   const S = M.stSafe, data = async () => { const [s] = await api.listStudents(); return S.student(s); };
   const bstat = async () => S.booking(await api.bookingStatus().catch(() => null));
   const nice = (c) => c.class_type === "conversation_lab" ? "Conversation Lab · conversación guiada" : M.TYPE_LABEL[c.class_type];
@@ -31,131 +34,152 @@
   }));
 
   const views = {
-    async inicio() {
-      const s = await data(), r = s.remaining, now = new Date().toISOString();
-      const up = (await api.listClasses({ from: now })).filter((c) => c.status === "scheduled").slice(0, 3);
-      const pr = ((await api.listProgress().catch(() => [])) || [])[0], b = await bstat();
-      const done = s.done;
-      app.innerHTML = `<h1>Hola, ${M.esc(s.full_name.split(" ")[0])}</h1>${M.paymentBanner(b)}
-        <div class="grid g4" style="margin-bottom:18px">
-          <div class="panel kpi"><div style="margin:6px 0 10px">${M.passes(b)}</div><span>Pases libres · cancelación tardía o inasistencia</span></div>
-          <div class="panel kpi blue rune">${S.pkgKpi(s)}</div>
-          <div class="panel kpi"><b>${S.counter(done)}<small style="font-size:1rem" class="muted">/32</small></b><span>Clases de tu curso actual</span></div>
-          <div class="panel kpi red"><b>${s.hasLevel || s.level_name ? M.esc(s.level_name || M.LEVELS[s.current_level - 1]) + (s.current_sublevel ? "." + s.current_sublevel : "") : "Por asignar"}</b><span>Tu nivel actual</span></div></div>
-        <div class="panel"><div class="bar"><i style="width:${(S.counter(done) / 32) * 100}%"></i></div><p class="small muted" style="margin-top:6px">${s.hasPackage ? "" : S.SIN_PAQ + " · "}Próxima: ${M.classLabel(r.next_class_number)} · ${M.esc(M.classInfo(r.next_class_number, s.program).title)}</p></div>
-        <div class="sp-grid" style="margin-bottom:18px">${M.perfil.mcerCard(done)}</div>
-        <div class="grid g2"><div class="panel"><h3>Próximas clases</h3>${up.map(clsRow).join("") || '<p class="muted">No tienes clases agendadas.</p>'}
-          <p><a class="btn sm" href="#solicitar" id="goreq">${b.payment_blocked ? "Ver estado de mi paquete" : "Solicitar una clase"}</a></p></div>
-        <div class="panel"><h3>Tu mes</h3>${pr ? `<div class="grid g3"><div class="kpi"><b>${pr.speaking_minutes}</b><span>min hablando</span></div><div class="kpi"><b>${pr.speaking_pct ?? "—"}%</b><span>del tiempo</span></div><div class="kpi"><b>${pr.fluency ?? "—"}/5</b><span>fluidez</span></div></div>
-          <p class="small muted">Vocabulario nuevo:</p><div class="chips">${(pr.new_vocabulary || []).map((w) => `<span class="chip">${M.esc(w)}</span>`).join("")}</div>` : '<p class="muted">Tu teacher registrará tu progreso de este mes.</p>'}</div></div>`;
-      M.$("#goreq").onclick = (e) => { e.preventDefault(); M.$('nav.tabs [data-tab="solicitar"]').click(); };
-      bindCancel(b);
-    },
-    async solicitar() {
-      const [s, b, reqs, mine] = await Promise.all([data(), bstat(), api.listRequests(), api.listClasses()]);
-      const to = new Date(week.getTime() + 7 * 864e5), cal = s.teacher_id ? await api.teacherCalendar(s.teacher_id, week.toISOString(), to.toISOString()) : { availability: [], busy: [] };
-      const days = [1, 2, 3, 4, 5, 6].map((i) => new Date(week.getTime() + (i - 1) * 864e5));
-      const minT = Date.now() + b.min_request_hours * 3600e3, locked = b.payment_blocked || b.available_to_request < 1;
-      const pend = reqs.filter((r) => r.status === "pending");
-      const state = (slot) => {
-        const p = M.bog(slot), iso = slot.toISOString();
-        if (!M.isValidSlot(slot)) return "off";
-        if (cal.availability.length && !cal.availability.some(([d, a, z]) => d === p.dow && p.h >= a && p.h < z)) return "off";
-        if (mine.some((c) => c.status === "scheduled" && c.starts_at === iso)) return "mine";
-        if (pend.some((r) => r.starts_at === iso)) return "pend";
-        if (cal.busy.includes(iso)) return "busy";
-        if (slot.getTime() < minT) return "soon";
-        return "free";
-      };
-      const LBL = { off: "", mine: "Tu clase", pend: "Solicitada", busy: "Ocupado", soon: "—", free: "Libre" };
-      let g = '<div class="hd">Hora</div>' + days.map((d) => `<div class="hd">${M.DOW[M.bog(d).dow]} ${M.bog(d).d}/${M.bog(d).m}</div>`).join("");
-      let list = "";
-      for (let h = 6; h < 18; h++) {
-        g += `<div class="hr">${String(h).padStart(2, "0")}:00</div>`;
-        days.forEach((d) => { const p = M.bog(d), slot = M.bogDate(p.y, p.m, p.d, h), st = state(slot);
-          g += `<div class="${st === "free" ? "free req" : st}" ${st === "free" ? `data-slot="${slot.toISOString()}"` : ""}>${LBL[st]}</div>`; });
-      }
-      days.forEach((d) => { const p = M.bog(d), sl = [];
-        for (let h = 6; h < 18; h++) { const slot = M.bogDate(p.y, p.m, p.d, h), st = state(slot);
-          if (st === "free") sl.push(`<button data-slot="${slot.toISOString()}">${String(h).padStart(2, "0")}:00</button>`);
-          if (st === "pend" || st === "mine") sl.push(`<span class="chip pend">${String(h).padStart(2, "0")}:00 · ${LBL[st]}</span>`); }
-        list += `<div class="day"><b>${M.DOW[p.dow]} ${p.d}/${p.m}</b><div class="chips" style="margin-top:6px">${sl.join("") || '<span class="muted small">Sin bloques libres</span>'}</div></div>`; });
-      const wEnd = new Date(week.getTime() + 5 * 864e5);
-      app.innerHTML = `<h1>Solicitar clase</h1>${M.paymentBanner(b)}${s.hasPackage ? "" : `<div class="panel"><p class="sp-pend">${S.SIN_PAQ}. Cuando tengas uno podrás solicitar clases.</p><a class="btn sm" href="precios.html">Ver paquetes y precios</a></div>`}
-        <div class="grid g3" style="margin-bottom:18px">
-          <div class="panel kpi blue"><b>${b.available_to_request}</b><span>Clases que puedes solicitar</span></div>
-          <div class="panel kpi"><b>${b.pending_requests}</b><span>Solicitudes pendientes</span></div>
-          <div class="panel kpi"><div style="margin:6px 0 10px">${M.passes(b)}</div><span>Pases libres</span></div></div>
-        <div class="panel rune"><div class="row">
-          <div style="flex:0 0 auto"><button class="btn ghost sm" id="prev">◀</button> <button class="btn ghost sm" id="next">▶</button></div>
-          <div><b>Calendario de ${M.esc(s.teacher_name || "tu teacher")}</b> · ${M.fmtDate(week)} – ${M.fmtDate(wEnd)} <span class="muted small">· hora Bogotá · bloques de 60 min</span></div></div>
-          <div class="legend"><span><i style="background:rgba(60,207,142,.25)"></i>Libre (clic para solicitar)</span><span><i style="background:rgba(231,176,74,.3)"></i>Tu solicitud pendiente</span>
-            <span><i style="background:rgba(58,160,255,.3)"></i>Tu clase</span><span><i style="background:rgba(255,255,255,.08)"></i>Ocupado</span><span><i class="off" style="background:repeating-linear-gradient(45deg,#333 0 3px,transparent 3px 6px)"></i>Fuera de horario</span></div>
-          <div class="cal-desk table-wrap"><div class="sched ${locked ? "locked" : ""}">${g}</div></div>
-          <div class="daylist">${list}</div>
-          <p class="muted small">Tu solicitud queda <b>pendiente</b> hasta que tu teacher o el admin la apruebe. Se solicita con al menos ${b.min_request_hours} h de anticipación.
-          Puedes cancelar sin cargo hasta ${b.late_cancel_hours} h antes; después (o si no asistes) se usa un pase libre y, sin pases, se descuenta la clase.</p></div>
-        <div class="panel"><h3>Mis solicitudes</h3>${reqs.slice().reverse().map((r) => `<div class="cls"><div><b>${M.fmtDateTime(r.starts_at)}</b> ${M.tagReq(r.status)}
-          ${r.student_note ? `<br><span class="small muted">Tu nota: ${M.esc(r.student_note)}</span>` : ""}${r.decision_note ? `<br><span class="small">Respuesta: ${M.esc(r.decision_note)}</span>` : ""}</div>
-          <div>${r.status === "pending" ? `<button class="btn ghost sm" data-wd="${r.id}">Retirar</button>` : ""}</div></div>`).join("") || '<p class="muted">Aún no has enviado solicitudes.</p>'}</div>`;
-      M.$("#prev").onclick = () => { week = new Date(week.getTime() - 7 * 864e5); render(); };
-      M.$("#next").onclick = () => { week = new Date(week.getTime() + 7 * 864e5); render(); };
-      M.$$("[data-slot]").forEach((el) => (el.onclick = () => {
-        if (b.payment_blocked) return M.toast("Pago pendiente: no puedes solicitar clases hasta que el admin confirme el pago de tu paquete.", true);
-        if (b.available_to_request < 1) return M.toast("No te quedan clases disponibles para solicitar en tu paquete.", true);
-        M.modal(`<h2>Solicitar clase</h2><p><b>${M.fmtDateTime(el.dataset.slot)}</b> con ${M.esc(s.teacher_name || "tu teacher")} · 60 min</p>
-          <label>Nota para tu teacher (opcional)</label><textarea id="rn" rows="2" maxlength="500"></textarea>
-          <p class="small muted">La clase se confirma cuando tu teacher o el admin aprueben la solicitud.</p>
-          <p><button class="btn" id="ok">Enviar solicitud</button> <button class="btn ghost" onclick="MEC.closeModal()">Cancelar</button></p>`, () => {
-          M.$("#ok").onclick = M.wrapErr(async () => { await api.createRequest({ starts_at: el.dataset.slot, note: M.$("#rn").value.trim() }); M.closeModal(); M.toast("Solicitud enviada"); render(); });
-        });
-      }));
-      M.$$("[data-wd]").forEach((el) => (el.onclick = M.wrapErr(async () => { await api.cancelRequest(el.dataset.wd); M.toast("Solicitud retirada"); render(); })));
-    },
-    async camino() {
-      const s = await data(), done = s.done, next = Math.min(160, done + 1);
-      const rows = [0, 1, 2, 3, 4].map((li) => {
-        const base = li * 32, subs = [1, 2, 3, 4, 5].map((k) => { const a = base + (k - 1) * 6, d = Math.max(0, Math.min(6, done - a)), now = next > a && next <= a + 6;
-          return `<div class="sub ${d === 6 ? "done" : ""} ${now ? "now" : ""}" title="${M.LEVELS[li]}.${k}: ${d}/6"><i style="width:${(d / 6) * 100}%"></i><span>${M.LEVELS[li]}.${k} · ${d}/6</span></div>`; }).join("");
-        const rv = Math.max(0, Math.min(2, done - base - 30));
-        return `<div class="lvl"><div class="ln">${M.esc(M.LEVEL_NAMES[s.program][li])}</div>${subs}<div class="sub rv ${rv === 2 ? "done" : ""}"><i style="width:${rv * 50}%"></i><span>Repaso ${rv}/2</span></div></div>`;
-      }).join("");
-      app.innerHTML = `<h1>Mi camino</h1><div class="panel rune"><p class="muted">5 cursos independientes, uno por nivel (32 clases cada uno) · 5 subniveles de 6 clases (4 de contenido, Practice Studio y Conversation Lab) · 2 repasos por nivel. Cada clase se habilita al completar la anterior.</p>
-        <div class="levels">${rows}</div></div>
-        <div class="panel"><h3>Subnivel actual</h3>${(() => { const i = M.classInfo(next, s.program); if (!i.sub) return `<p>${M.esc(i.title)}</p>`;
-          const a = (i.level - 1) * 32 + (i.sub - 1) * 6; return [1, 2, 3, 4, 5, 6].map((k) => { const n = a + k, st = n <= done ? "✔" : n === next ? "▶" : "🔒";
-            return `<div class="cls"><div>${st} <b>${((n - 1) % 32) + 1}/32</b> · ${M.esc(M.classInfo(n, s.program).title)}</div><span class="tag">${M.TYPE_LABEL[M.classInfo(n).type] === "Conversation Lab" ? "Conversación guiada" : M.TYPE_LABEL[M.classInfo(n).type]}</span></div>`; }).join(""); })()}</div>`;
-    },
-    async clases() {
+    async inicio() { // Inicio = vista completa de "Mis clases" (fondo del salón vikingo) + saludo, estado de pago, pases libres y "Tu mes"
       const [s, cls, b, pkgs] = await Promise.all([data(), api.listClasses(), bstat(), api.listStudentPackages().catch(() => [])]);
-      const prof = await api.getStudentProfile(s.id).catch(() => null), now = new Date().toISOString();
+      const prof = await api.getStudentProfile(s.id).catch(() => null), pr = ((await api.listProgress().catch(() => [])) || [])[0], now = new Date().toISOString();
       const up = cls.filter((c) => c.status === "scheduled" && c.starts_at >= now);
-      app.innerHTML = `<div class="smc"><div class="stt-in"><h1>Mis clases</h1>${M.perfil.misClases({ s, pkgs: pkgs || [], classes: cls, prof, self: true, agendar: "#solicitar" })}
+      const mes = `<div class="sp-mes"><h3>Tu mes</h3>${pr ? `<div class="grid g3"><div class="kpi"><b>${pr.speaking_minutes}</b><span>min hablando</span></div><div class="kpi"><b>${pr.speaking_pct ?? "—"}%</b><span>del tiempo</span></div><div class="kpi"><b>${pr.fluency ?? "—"}/5</b><span>fluidez</span></div></div>
+          ${(pr.new_vocabulary || []).length ? `<p class="sp-small">Vocabulario nuevo:</p><div class="chips">${pr.new_vocabulary.map((w) => `<span class="chip">${M.esc(w)}</span>`).join("")}</div>` : ""}` : '<p class="sp-pend">Tu teacher registrará tu progreso de este mes.</p>'}</div>`;
+      app.innerHTML = `<div class="smc"><div class="stt-in"><h1>Hola, ${M.esc((s.full_name || "").split(" ")[0])}</h1>${M.paymentBanner(b)}
+        ${M.perfil.misClases({ s, pkgs: pkgs || [], classes: cls, prof, self: true, agendar: "#solicitar", passes: M.passes(b), mes, fbLink: true })}
         <div class="panel rune pf-sec"><h3>Próximas clases agendadas</h3>${up.map(clsRow).join("") || '<p class="muted">Sin clases agendadas.</p>'}
+        <p><a class="btn sm" href="#solicitar" id="goreq">${b.payment_blocked ? "Ver estado de mi paquete" : "Solicitar una clase"}</a></p>
         <p class="small muted">Horario en hora de Bogotá. El enlace de Google Meet se activa a la hora de tu clase. Cancelación sin cargo hasta ${b.late_cancel_hours} h antes · pases libres: ${b.passes_remaining} de ${b.passes_total}.</p></div></div></div>`;
+      M.$("#goreq").onclick = (e) => { e.preventDefault(); M.$('nav.tabs [data-tab="solicitar"]').click(); };
       M.perfil.bindTest(app); bindCancel(b);
     },
+    async solicitar() { // "Calendario": la misma agenda semanal del admin (js/agenda-view.js). Otros estudiantes = "Ocupado" (sin identidad; la RPC no la envía).
+      const to = new Date(week.getTime() + 7 * 864e5);
+      const [s, b, reqs, mine, teachers, busy, tps, tc] = await Promise.all([data(), bstat(), api.listRequests(), api.listClasses(), api.calendarTeachers(),
+        api.calendarBusy(week.toISOString(), to.toISOString()), api.listTeacherProfiles().catch(() => []), api.creditsByType().catch(() => null)]);
+      const colors = M.teacherColors(teachers, tps), esc = M.esc, hh = M.agenda.hh, tname = (id) => (teachers.find((t) => t.id === id) || {}).full_name || "";
+      const minT = Date.now() + b.min_request_hours * 3600e3, locked = b.payment_blocked || b.available_to_request < 1;
+      const shownT = teachers.filter((t) => !calFilter || t.id === calFilter);
+      const pend = reqs.filter((r) => r.status === "pending"), own = mine.filter((c) => c.status !== "cancelled");
+      const avail = (t, p) => !t.availability || !t.availability.length || t.availability.some(([d, a, z]) => d === p.dow && p.h >= a && p.h < z);
+      const at = (iso) => ({ own: own.find((c) => c.starts_at === iso), req: pend.find((r) => r.starts_at === iso), busy: busy.filter((x) => x.starts_at === iso && !x.mine) });
+      const freeAt = (slot) => { const iso = slot.toISOString(), p = M.bog(slot), a = at(iso);
+        if (a.own || a.req || slot.getTime() < minT) return [];
+        return shownT.filter((t) => avail(t, p) && !a.busy.some((x) => x.teacher_id === t.id)); };
+      const blocks = [];
+      own.forEach((c) => { const k = M.classKind(c); blocks.push({ id: "own:" + c.id, starts_at: c.starts_at, kind: "own", icon: k === "grupal" ? "grp" : k === "club" ? "conv" : "one", status: c.status,
+        title: "Tu clase", sub: `${esc(c.class_number ? M.classCodeTopic(c.class_number, s.program) : (c.title || "Refuerzo"))} · ${esc(M.KIND_LABEL[k])} · ${esc(c.teacher_name || tname(c.teacher_id))}`,
+        teacher_id: c.teacher_id, teacher_name: c.teacher_name, tip: `Tu clase · ${M.STATUS_LABEL[c.status] || ""}` }); });
+      pend.forEach((r) => { if (own.some((c) => c.starts_at === r.starts_at)) return;
+        blocks.push({ id: "req:" + r.id, starts_at: r.starts_at, kind: "pend", icon: "hour", title: "Tu solicitud", sub: `Pendiente de aprobación · ${esc(r.modality === "group" ? "Grupal" : "Personalizada")} · ${esc(tname(r.teacher_id))}`, teacher_id: r.teacher_id, teacher_name: tname(r.teacher_id), tip: "Solicitud pendiente" }); });
+      const seen = new Set();
+      busy.filter((x) => !x.mine && (!calFilter || x.teacher_id === calFilter)).forEach((x) => { const iso = x.starts_at; if (seen.has(iso) || own.some((c) => c.starts_at === iso) || pend.some((r) => r.starts_at === iso)) return; seen.add(iso);
+        const slot = new Date(iso), libres = freeAt(slot).length;
+        blocks.push({ id: "busy:" + iso, starts_at: iso, kind: "busy", icon: "lock", title: "Ocupado", sub: libres ? `${libres} teacher${libres === 1 ? "" : "s"} libre${libres === 1 ? "" : "s"} · clic para agendar` : "", teacher_id: calFilter || null, tip: "Ocupado" }); });
+      const cell = (slot, valid, p, h) => { if (!valid) return { cls: "off" }; const f = freeAt(slot);
+        return f.length ? { cls: "free", attrs: `data-slot="${slot.toISOString()}" tabindex="0" role="button" aria-label="Agendar ${M.DOW[p.dow]} ${hh(h)}" title="Agendar ${M.DOW[p.dow]} ${hh(h)}"` } : { cls: "off" }; };
+      const today = M.bog(new Date()), hoy = own.filter((c) => { const q = M.bog(c.starts_at); return q.y === today.y && q.m === today.m && q.d === today.d; }).length;
+      const left = tc ? `${tc.personal_left} personalizada${tc.personal_left === 1 ? "" : "s"} · ${tc.group_left} grupal${tc.group_left === 1 ? "" : "es"}` : `${b.available_to_request} clase${b.available_to_request === 1 ? "" : "s"}`;
+      app.innerHTML = M.agenda.render({ week, teachers, colors, filter: calFilter, cls: "agv-est", title: "Calendario", tag: "Tu agenda de clases",
+        pergamino: hoy ? `Hoy: ${hoy} clase${hoy === 1 ? "" : "s"} tuya${hoy === 1 ? "" : "s"}` : `Puedes agendar: ${left}`,
+        above: `<div class="agv-avisos">${M.paymentBanner(b)}${s.hasPackage ? "" : `<div class="panel"><p class="sp-pend">${S.SIN_PAQ}. Cuando tengas uno podrás agendar clases.</p><a class="btn sm" href="precios.html">Ver paquetes y precios</a></div>`}</div>`,
+        legend: `<div class="agv-ley"><span><i class="lf"></i>Libre · clic para agendar</span><span><i class="lo"></i>Tu clase</span><span><i class="lp"></i>Tu solicitud pendiente</span><span><i class="lb"></i>Ocupado</span><span><i class="lx"></i>No disponible</span><span class="agv-saldo">Te quedan: <b>${left}</b></span></div>`,
+        blocks, help: `Clic en un bloque libre para agendar con el teacher que prefieras. Tu solicitud queda pendiente hasta que el admin la apruebe; se pide con al menos ${b.min_request_hours} h de anticipación. Cancelación sin cargo hasta ${b.late_cancel_hours} h antes; después se usa un pase libre y, sin pases, se descuenta la clase.`,
+        below: `<div class="agv-wrap agv-wrap1"><section class="agv-main"><h2 class="agv-h2">Mis solicitudes</h2>${reqs.slice().reverse().map((r) => `<div class="cls"><div><b>${M.fmtDateTime(r.starts_at)}</b> ${M.tagReq(r.status)} <span class="small muted">· ${esc(tname(r.teacher_id))} · ${r.modality === "group" ? "Grupal" : "Personalizada"}</span>
+          ${r.student_note ? `<br><span class="small muted">Tu nota: ${esc(r.student_note)}</span>` : ""}${r.decision_note ? `<br><span class="small">Respuesta: ${esc(r.decision_note)}</span>` : ""}</div>
+          <div>${r.status === "pending" ? `<button class="btn ghost sm" data-wd="${r.id}">Retirar</button>` : ""}</div></div>`).join("") || '<p class="muted">Aún no has enviado solicitudes.</p>'}</section></div>` });
+      M.$("#prev").onclick = () => { week = new Date(week.getTime() - 7 * 864e5); render(); };
+      M.$("#next").onclick = () => { week = new Date(week.getTime() + 7 * 864e5); render(); };
+      M.$("#today").onclick = () => { week = M.weekStart(new Date()); render(); };
+      M.$("#tf").onchange = (e) => { calFilter = e.target.value; render(); };
+      const agendar = (iso) => {
+        if (b.payment_blocked) return M.toast("Pago pendiente: no puedes agendar clases hasta que el admin confirme el pago de tu paquete.", true);
+        if (locked) return M.toast("No te quedan clases disponibles para agendar en tu paquete.", true);
+        const f = freeAt(new Date(iso)); if (!f.length) return M.toast("Ese bloque ya no tiene teachers libres.", true);
+        const pre = f.find((t) => t.id === calFilter) || f.find((t) => t.id === s.teacher_id) || f[0], pl = tc ? tc.personal_left : b.available_to_request;
+        M.modal(`<h2>Agendar clase</h2><p><b>${M.fmtDateTime(iso)}</b> · 60 min · hora Bogotá</p>
+          <label for="rt">Teacher</label><select id="rt">${f.map((t) => `<option value="${t.id}" ${t.id === pre.id ? "selected" : ""}>${esc(t.full_name)}</option>`).join("")}</select>
+          <label for="rm">Tipo de clase</label><select id="rm"><option value="individual">Personalizada (1 a 1) · te quedan ${pl}</option><option value="group" disabled>Grupal · se agenda en un grupo abierto${tc ? ` (te quedan ${tc.group_left})` : ""}</option></select>
+          <label for="rn">Nota para tu teacher (opcional)</label><textarea id="rn" rows="2" maxlength="500"></textarea>
+          <p class="small muted">Se descuenta de tus clases <b>personalizadas</b>. La clase se confirma cuando el admin apruebe la solicitud y se descuenta del paquete al dictarse (o por cancelación tardía sin pases libres).</p>
+          <p><button class="btn" id="ok" ${pl < 1 ? "disabled" : ""}>Agendar</button> <button class="btn ghost" onclick="MEC.closeModal()">Cancelar</button></p>`, () => {
+          M.$("#ok").onclick = M.wrapErr(async () => { await api.createRequest({ starts_at: iso, teacher_id: M.$("#rt").value, modality: M.$("#rm").value, note: M.$("#rn").value.trim() }); M.closeModal(); M.toast("Solicitud enviada: queda pendiente de aprobación"); render(); });
+        });
+      };
+      M.$$(".agv-celda.free").forEach((el) => { el.onclick = () => agendar(el.dataset.slot); el.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); agendar(el.dataset.slot); } }; });
+      M.$$(".agv-b").forEach((el) => (el.onclick = () => { const [t, id] = [el.dataset.id.slice(0, el.dataset.id.indexOf(":")), el.dataset.id.slice(el.dataset.id.indexOf(":") + 1)];
+        if (t === "busy") return freeAt(new Date(id)).length ? agendar(id) : M.toast("Bloque ocupado");
+        if (t === "own") { const c = own.find((x) => x.id === id); return M.modal(`<h2>Tu clase</h2><p><b>${M.fmtDateTime(c.starts_at)}</b> · ${esc(c.teacher_name || tname(c.teacher_id))}</p><p>${M.kindChip(c)} ${esc(c.class_number ? M.classCodeTopic(c.class_number, s.program) : (c.title || "Refuerzo"))}</p><p>${M.tagStatus(c.status)}</p>
+          ${c.status === "scheduled" && c.meet_url ? `<p><a class="btn sm" href="${esc(c.meet_url)}" target="_blank" rel="noopener">Entrar a Google Meet</a></p>` : ""}<p><button class="btn ghost" onclick="MEC.closeModal()">Cerrar</button></p>`); }
+        if (t === "req") M.toast("Solicitud pendiente de aprobación. Puedes retirarla abajo, en «Mis solicitudes».");
+      }));
+      M.$("#agv-cta").onclick = () => { const f = M.$(".agv-celda.free"); if (f) agendar(f.dataset.slot); else M.toast("No hay bloques libres esta semana", true); };
+      M.$$("[data-wd]").forEach((el) => (el.onclick = M.wrapErr(async () => { await api.cancelRequest(el.dataset.wd); M.toast("Solicitud retirada"); render(); })));
+      if (calFocus) { // viene de "Inscribirme" (Noticias y eventos): resalta el bloque del evento
+        const f = calFocus; calFocus = null; const el = M.$(`[data-slot="${f}"]`) || M.$$(".agv-b").find((x) => x.dataset.id === "busy:" + f);
+        const d = M.bog(f), hdr = `${M.DOW[d.dow]} ${String(d.d).padStart(2, "0")}/${String(d.m).padStart(2, "0")} ${M.agenda.hh(d.h)}`;
+        if (el) { el.classList.add("agv-focus"); el.scrollIntoView({ block: "center", behavior: "smooth" }); }
+        M.toast(el ? `Evento: ${hdr}. Haz clic en el bloque resaltado para agendar tu cupo.` : `Evento: ${hdr}. Ese bloque no tiene teachers libres; elige otro horario o escribe a MEC.`, !el);
+      }
+    },
+    async noticias() { await M.noticias.student(app, { inscribir: (iso) => { week = M.weekStart(new Date(iso)); calFocus = iso; calFilter = ""; history.replaceState(null, "", "#solicitar"); goTab("solicitar"); } }); },
+    async espacio() { const [s, cls] = await Promise.all([data(), api.listClasses()]); await M.espacio.studentView(app, { s, cls }); },
     async teachers() {
       const [s, list] = await Promise.all([data(), api.listTeacherProfiles()]);
       app.innerHTML = `<div class="stt"><div class="stt-in"><h1>Teachers</h1>${M.perfil.teachersView(list, { myTeacherId: s.teacher_id, agendar: "#solicitar" })}</div></div>`;
     },
-    async feedback() {
-      const cls = (await api.listClasses()).filter((c) => c.sentences || c.teacher_note).reverse();
-      app.innerHTML = `<h1>Feedback de tus clases</h1>${cls.map((c) => `<div class="panel"><h3>${M.esc(c.title)}</h3><p class="muted small">${M.fmtDateTime(c.starts_at)} · ${M.esc(c.teacher_name)}</p>
-        ${c.teacher_note ? `<p>${M.esc(c.teacher_note)}</p>` : ""}${c.sentences ? `<p class="small muted" style="margin:0;text-transform:uppercase;letter-spacing:.12em">My sentences today</p><ul class="sentences">${c.sentences.map((s) => `<li>${M.esc(s)}</li>`).join("")}</ul>` : ""}</div>`).join("") || '<div class="panel muted">Aún no hay feedback.</div>'}`;
+    async feedback() { // Visor grande arriba + lista; #feedback/<id> abre uno concreto (desde las tarjetas de Inicio)
+      const [s, cls] = await Promise.all([data(), api.listClasses()]), esc = M.esc;
+      const fbs = cls.filter((c) => c.status === "completed" && (c.teacher_note || (c.sentences && c.sentences.length))).sort((a, b) => b.starts_at.localeCompare(a.starts_at));
+      const want = decodeURIComponent((location.hash.match(/^#feedback\/(.+)$/) || [])[1] || "");
+      let sel = fbs.find((c) => c.id === want) || fbs[0];
+      const code = (c) => c.class_number ? M.classCodeTopic(c.class_number, s.program) : (c.title || "Sesión de refuerzo");
+      const viewer = (c) => !c ? '<h2>Feedback</h2><p class="sp-pend">Aún no hay feedback. Después de cada clase tu teacher te deja aquí sus notas y tus frases.</p>' : `
+        <div class="fb-v-h">${M.kindChip(c)}<span class="fb-cod">${esc(c.class_number ? M.classCode(c.class_number) : "Refuerzo")}</span><time datetime="${c.starts_at}">${M.fmtDateTime(c.starts_at)}</time></div>
+        <h2>${esc(code(c))}</h2><p class="sp-small">Teacher ${esc(String(c.teacher_name || "").replace(/^Teacher\s+/i, ""))}</p>
+        <div class="fb-v-cols"><div><h3>Notas del teacher</h3>${c.teacher_note ? `<p class="fb-nota">${esc(c.teacher_note)}</p>` : '<p class="sp-pend">Sin notas en esta clase.</p>'}</div>
+        <div><h3>My sentences today</h3>${c.sentences && c.sentences.length ? `<ol class="fb-frases">${c.sentences.map((x) => `<li>${esc(x)}</li>`).join("")}</ol>` : '<p class="sp-pend">Sin frases en esta clase.</p>'}</div></div>`;
+      const item = (c) => `<button type="button" class="fb-item${c === sel ? " on" : ""}" data-fb="${esc(c.id)}" aria-pressed="${c === sel}"><span class="fb-item-h">${M.kindChip(c)}<time>${M.fmtDate(c.starts_at)}</time></span><b>${esc(code(c))}</b>
+        <span class="sp-small">${esc(String(c.teacher_note || (c.sentences || [])[0] || "").slice(0, 90))}${String(c.teacher_note || "").length > 90 ? "…" : ""}</span></button>`;
+      const st = await api.spState().catch(() => null);
+      app.innerHTML = `<div class="smc fbk"><div class="stt-in"><h1>Feedback</h1>
+        <section class="sp-card fb-viewer" id="fb-v" tabindex="-1" aria-live="polite">${viewer(sel)}</section>
+        ${fbs.length ? `<section class="mt-sec"><h2 class="mt-h">Todos tus feedbacks</h2><div class="fb-lista">${fbs.map(item).join("")}</div></section>` : ""}
+        <div class="sp-grid fb-cards">${M.perfil.currentCard(s)}${M.perfil.nextCard(s, cls, "#solicitar", { cta: "Agendar mi siguiente clase" })}${M.perfil.historyCard(s, cls, "Clases tomadas")}
+          <section class="sp-card ancho fb-up"><h2>Sube tu ejercicio</h2><p class="sp-small" id="fb-up-n"></p><div id="fb-subs"></div></section></div></div></div>`;
+      const paintUp = () => { const box = M.$("#fb-subs"), n = M.$("#fb-up-n");
+        if (!st) { n.textContent = ""; box.innerHTML = '<p class="sp-pend">Próximamente podrás subir aquí tus ejercicios.</p>'; return; }
+        if (!st.accepted) { n.textContent = ""; box.innerHTML = '<p class="sp-pend">Para subir ejercicios, primero acepta las normas en Mi espacio.</p><p><a class="sp-btn oro" href="#espacio">Ir a Mi espacio</a></p>'; return; }
+        if (st.kid && !st.consent) { n.textContent = ""; box.innerHTML = '<p class="sp-pend">Disponible cuando MEC registre la autorización de tu acudiente.</p>'; return; }
+        n.textContent = sel ? `Entregas de la clase ${sel.class_number ? M.classCode(sel.class_number) : "de refuerzo"} (se guardan también en Mi espacio).` : "Tus entregas (se guardan también en Mi espacio).";
+        M.espacio.subsBox(box, { me, role: "student", kid: st.kid, upload: !st.suspended, class_id: sel ? sel.id : null, teacher_id: sel ? sel.teacher_id : s.teacher_id, empty: "Aún no enviaste ejercicios para esta clase." }); };
+      paintUp();
+      fbSelect = (id) => { const c = fbs.find((x) => x.id === id); if (!c) return; sel = c; M.$("#fb-v").innerHTML = viewer(c);
+        M.$$(".fb-item").forEach((b) => { const on = b.dataset.fb === id; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on); });
+        if (location.hash !== "#feedback/" + encodeURIComponent(id)) history.replaceState(null, "", "#feedback/" + encodeURIComponent(id));
+        paintUp(); if (window.matchMedia("(max-width: 760px)").matches) M.$("#fb-v").scrollIntoView({ behavior: "smooth", block: "start" }); M.$("#fb-v").focus({ preventScroll: true }); };
+      M.$$(".fb-item").forEach((b) => (b.onclick = () => fbSelect(b.dataset.fb)));
+      if (want && sel && sel.id === want) M.$("#fb-v").focus({ preventScroll: true });
     },
-    async libros() {
-      // Solo el nivel actual del estudiante (la base también lo impone con RLS: books_read y el bucket privado 'materiales').
-      const s = await data(), li = s.current_level, lvl = M.LEVELS[li - 1] || "";
-      const b = (await api.listBooks()).filter((x) => !x.teacher_only && x.level_index === li && (x.program === s.program || x.program === "ambos"));
-      const units = await (api.listBookUnits ? api.listBookUnits().catch(() => []) : []);
-      app.innerHTML = `<h1>Libros y materiales${lvl ? " · " + M.esc(lvl) : ""}</h1><p class="muted">Aquí ves el material de tu nivel actual.${s.hasPackage ? "" : " " + S.SIN_PAQ + "."}</p><div class="grid g2">${b.map((x) => {
-        const u = units.filter((y) => y.book_slug && y.book_slug === x.slug).sort((p, q) => p.sort_order - q.sort_order);
-        return `<div class="panel"><h3>${M.esc(x.title)}</h3>${x.storage_path ? `<p><button class="btn sm" data-pdf="${M.esc(x.storage_path)}">Abrir PDF</button></p>${u.length ? `<p class="small">Ir a la unidad: ${u.map((y) => `<button class="btn sm ghost" data-pdf="${M.esc(x.storage_path)}" data-page="${+y.page_start}">${M.esc(y.label)}</button>`).join(" ")}</p>` : ""}`
-          : x.url ? `<a class="btn sm" href="${M.esc(x.url)}" target="_blank" rel="noopener">Abrir</a>` : '<span class="muted small">Próximamente</span>'}</div>`; }).join("") || '<div class="panel"><p class="muted">Aún no hay material publicado para tu nivel.</p></div>'}</div>`;
+    async material() { // Material: solo los libros del nivel y la sección del estudiante (la base lo impone con RLS books_read y el bucket privado 'materiales')
+      const s = await data(), li = s.current_level, lvl = M.LEVELS[li - 1] || "", kids = s.program === "kids";
+      const CAT = [ // portadas reales (img/web/libros) · se emparejan con la tabla books por slug o por carpeta del PDF
+        { key: "a1/student-book", slug: "a1-students-book", level: 1, title: "A1 Student's Book", cover: "a1-students-book", desc: "Libro principal del curso A1: las unidades de cada subnivel." },
+        { key: "a1/practice-book", slug: "a1-practice-book", level: 1, title: "A1 Practice Book", cover: "a1-practice-book", desc: "Ejercicios para practicar después de cada clase." },
+        { key: "a1/speak-up", slug: "a1-speak-up", level: 1, title: "Speak Up A1", cover: "a1-speak-up", desc: "Conversación guiada para ganar fluidez." },
+        { key: "a2/practice-book", slug: "a2-practice-book", level: 2, title: "A2 Practice Book", cover: "a2-practice-book", desc: "Ejercicios para practicar el curso A2." }];
+      const rows = kids ? [] : (await api.listBooks()).filter((x) => !x.teacher_only && x.level_index === li && (x.program === s.program || x.program === "ambos"));
+      const units = rows.length ? await (api.listBookUnits ? api.listBookUnits().catch(() => []) : []) : [];
+      const match = (c) => rows.find((x) => x.slug === c.slug || String(x.storage_path || "").startsWith(c.key + "/"));
+      const mine = kids ? [] : CAT.filter((c) => c.level === li).map((c) => Object.assign({}, c, { row: match(c) })).filter((c) => c.row);
+      const card = (c) => { const x = c.row, u = units.filter((y) => y.book_slug && y.book_slug === x.slug).sort((p, q) => p.sort_order - q.sort_order);
+        return `<article class="sp-card mt-libro"><picture><source srcset="img/web/libros/${c.cover}-thumb-600x800.webp?v=20261016t" type="image/webp"><img src="img/web/libros/${c.cover}-thumb-600x800.jpg?v=20261016t" width="600" height="800" alt="Portada de ${M.esc(c.title)}" decoding="async"></picture>
+          <div class="mt-info"><h2>${M.esc(c.title)}</h2><p class="sp-small">${M.esc(c.desc)}</p>
+          ${x.storage_path ? `<p><button class="sp-btn oro" data-pdf="${M.esc(x.storage_path)}">Abrir PDF</button></p>${u.length ? `<p class="sp-small">Ir a la unidad: ${u.map((y) => `<button class="sp-btn" data-pdf="${M.esc(x.storage_path)}" data-page="${+y.page_start}">${M.esc(y.label)}</button>`).join(" ")}</p>` : ""}`
+            : x.url ? `<a class="sp-btn oro" href="${M.esc(x.url)}" target="_blank" rel="noopener">Abrir</a>` : '<p class="sp-pend">Próximamente</p>'}</div></article>`; };
+      const sec = kids
+        ? `<section class="mt-sec" aria-labelledby="mt-k"><h2 id="mt-k" class="mt-h">Mastery4Kids</h2><div class="sp-card mt-pronto"><h2>Próximamente</h2><p>Estamos preparando los libros de Mastery4Kids. Muy pronto los verás aquí.</p></div></section>`
+        : `<section class="mt-sec" aria-labelledby="mt-a"><h2 id="mt-a" class="mt-h">Estudiantes${lvl ? ` · curso ${M.esc(lvl)}` : ""}</h2>
+            ${mine.length ? `<div class="mt-grid">${mine.map(card).join("")}</div>` : `<div class="sp-card mt-pronto"><h2>Próximamente</h2><p>Aún no hay material publicado para ${lvl ? "tu curso " + M.esc(lvl) : "tu curso"}.</p></div>`}</section>`;
+      app.innerHTML = `<div class="smc mtb"><div class="stt-in"><h1>Material</h1><p class="mt-intro">Aquí ves el material de tu curso actual.${s.hasPackage ? "" : " " + S.SIN_PAQ + "."}</p>${sec}</div></div>`;
       M.$$("[data-pdf]").forEach((el) => (el.onclick = M.wrapErr(async () => { const w = window.open("about:blank", "_blank"); if (w) w.opener = null;
-        const url = await api.bookFileUrl(el.dataset.pdf); const full = url + (el.dataset.page ? "#page=" + el.dataset.page : "");
-        if (w) w.location = full; else location.href = full; })));
+        try { const url = await api.bookFileUrl(el.dataset.pdf); const full = url + (el.dataset.page ? "#page=" + el.dataset.page : "");
+          if (w) w.location = full; else location.href = full; } catch (e) { if (w) w.close(); throw e; } })));
     }
   };
   render();

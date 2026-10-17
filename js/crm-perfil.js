@@ -12,7 +12,7 @@
   const addMeses = (d, n) => { const x = new Date(d); x.setUTCMonth(x.getUTCMonth() + n); return x.toISOString(); };
   const NIV = ["A1", "A2", "B1", "B2", "C1", "C2"];
 
-  function mcer(done) { // % completado de cada nivel (32 clases por nivel; C2 fuera del programa actual)
+  function mcer(done) { // % completado de cada nivel (32 clases por nivel; C2 no se ofrece aún)
     const o = {}; NIV.forEach((k, i) => { o[k] = i < 5 ? Math.round(Math.max(0, Math.min(32, done - i * 32)) / 32 * 100) : 0; }); return o;
   }
   function mcerSvg(m) {
@@ -34,11 +34,45 @@
     let sig, tt = t;
     if (arr && arr.some((x) => x[0] === code)) sig = arr[arr.findIndex((x) => x[0] === code) + 1];
     else { tt = "P"; sig = V3.P.find((x) => x[1] > (p.classes_total || 0)); }
-    return sig ? `<a class="sp-btn oro" href="precios.html#${ANCLA[tt]}">Upgrade · Pasa a ${NAME[sig[0]] || sig[0]} · ${sig[2] ? sig[2] : sig[1] + " clases"}</a>` : `<p class="sp-small">Ya tienes el paquete más grande. <a href="precios.html">Ver precios</a></p>`;
+    return sig ? `<a class="sp-btn oro" href="precios.html#${ANCLA[tt]}">Renovar plan · Pasa a ${NAME[sig[0]] || sig[0]} · ${sig[2] ? sig[2] : sig[1] + " clases"}</a>` : `<p class="sp-small">Ya tienes el paquete más grande. <a href="precios.html">Ver precios</a></p>`;
   }
 
 
   /* ctx = { s: estudiante (listStudents), pkgs, classes, prof: student_profiles|null, note: (solo staff) objeto|null|undefined, agendar: href|null, self: bool } */
+  /* Mi paquete por tipo: compradas · tomadas · restantes para personalizadas y grupales.
+     Tomadas por tipo = clases consumidas de ESTE paquete (student_package_id) según modality; CLUB cuenta según su modalidad. */
+  function porTipo(p, classes, used, self) {
+    const tot = p.classes_total, code = String(p.package_code || "").toUpperCase();
+    let pt = p.personal_total, gt = p.group_total;
+    if (pt == null && gt == null) { if (/^(G\d|SG)/.test(code)) { pt = 0; gt = tot; } else { pt = tot; gt = 0; } }
+    pt = pt || 0; gt = gt || 0;
+    const linked = classes.some((c) => "student_package_id" in c);
+    const cons = classes.filter((c) => c.class_type !== "extra_reinforcement" && (linked ? (c.student_package_id === p.id && c.status === "completed") || c.penalty_package_id === p.id
+      : c.status === "completed" && String(c.starts_at) >= String(p.purchase_date || "")));
+    const hasMod = classes.some((c) => "modality" in c || "session_kind" in c);
+    let pu = cons.filter((c) => M.classKind(c) === "personal").length, gu = cons.length - pu, exact = true;
+    if (p.personal_used != null && p.group_used != null) { pu = p.personal_used; gu = p.group_used; } // saldo por tipo exacto (propuesta tipo_clase)
+    else if (!gt) { pu = used; gu = 0; } else if (!pt) { pu = 0; gu = used; } else if (!hasMod || pu + gu !== used) exact = false;
+    const row = (t, a, b) => `<tr><th scope="row">${t}</th><td>${a}</td><td>${exact ? b : "—"}</td><td>${exact ? Math.max(0, a - b) : "—"}</td></tr>`;
+    return `<table class="sp-tipos"><thead><tr><th scope="col"><span class="sr">Tipo</span></th><th scope="col">Compradas</th><th scope="col">Tomadas</th><th scope="col">${self ? "Te quedan" : "Restantes"}</th></tr></thead><tbody>
+      ${pt ? row('<span class="sp-kind k-personal">Personalizadas</span>', pt, pu) : ""}${gt ? row('<span class="sp-kind k-grupal">Grupales</span>', gt, gu) : ""}
+      ${pt && gt ? `<tr class="tot"><th scope="row">Total</th><td>${tot}</td><td>${used}</td><td>${Math.max(0, tot - used)}</td></tr>` : ""}</tbody></table>
+      ${exact ? "" : `<p class="sp-small">El desglose de tomadas por tipo aún no está disponible; total tomadas: ${used}.</p>`}`;
+  }
+
+
+  /* Tarjetas reutilizables (Inicio, Mi espacio y Feedback usan el MISMO componente) */
+  const doneOf = (s) => Math.max(0, (s.start_class_number || 1) - 1 + (s.classes_completed || 0));
+  const currentCard = (s) => { const done = doneOf(s);
+    return card("Clase actual", done > 0 ? `<p class="sp-cod">${esc(M.classCodeTopic(done, s.program))}</p>` : `<p class="sp-pend">Aún no hay clases completadas.</p>`); };
+  const historyCard = (s, classes, title = "Clases anteriores") => { const past = classes.filter((c) => c.status === "completed").sort((a, b) => b.starts_at.localeCompare(a.starts_at));
+    return card(title, past.length ? `${M.kindLegend()}<ol class="sp-hist">${past.slice(0, 12).map((c) => `<li><time datetime="${c.starts_at}">${M.fmtDate(c.starts_at)}</time>${M.kindChip(c)}<span>${esc(c.class_number ? M.classCodeTopic(c.class_number, s.program) : (c.title || "Sesión de refuerzo"))}</span></li>`).join("")}</ol>${past.length > 12 ? `<p class="sp-small">… y ${past.length - 12} más.</p>` : ""}` : `<p class="sp-pend">Aún no hay clases anteriores.</p>`); };
+  /* opts.cta: texto del botón cuando no hay clase agendada (p. ej. "Agendar mi siguiente clase") */
+  const nextCard = (s, classes, agendar, opts = {}) => { const done = doneOf(s), now = new Date();
+    const sched = classes.filter((c) => c.status === "scheduled" && new Date(c.starts_at) > now).sort((a, b) => a.starts_at.localeCompare(b.starts_at))[0];
+    return card("Próxima clase", done < 160 ? `<p class="sp-cod">${esc(M.classCodeTopic(done + 1, s.program))}</p>` + (sched ? `<div class="sp-variante ok"><span class="sp-tag ok">Agendada</span><span>${M.fmtDateTime(sched.starts_at)} · Teacher ${esc(sched.teacher_name || s.teacher_name || "")}</span></div>`
+      : `<div class="sp-variante"><span class="sp-tag">Sin agendar</span>${agendar ? `<a class="sp-btn${opts.cta ? " oro" : ""}" href="${agendar}" data-agendar>${esc(opts.cta || "Agendar")}</a>` : ""}</div>`) : `<p class="sp-pend">Todos los cursos completados.</p>`); };
+
   function misClases(ctx) {
     const s = ctx.s, done = Math.max(0, (s.start_class_number || 1) - 1 + (s.classes_completed || 0)), now = new Date();
     const you = ctx.self ? "Aún no tienes" : "Aún no tiene";
@@ -55,26 +89,26 @@
       const vence = p.expiry_date || addMeses(p.purchase_date, tot > 20 ? 12 : 6);
       const v3 = /^[PGC]\d$/.test(code) && V3[code[0]].find((x) => x[0] === code);
       paq = `<p class="sp-paq"><strong>${esc(NAME[code] || code || "Paquete")}</strong>${v3 ? (code[0] === "C" ? "" : " · " + TIPO[code[0]]) + " · " + (v3[2] || tot + " clases") : ` · ${tot} clase${tot === 1 ? "" : "s"}`}${code.endsWith("-USD") ? " (catálogo anterior)" : ""}${p.payment_status === "pending" ? ' <span class="sp-tag">Pago pendiente</span>' : ""}</p>
-        <div class="sp-cont"><div><b>${tot}</b><small>compradas</small></div><div><b>${used}</b><small>tomadas</small></div><div><b>${quedan}</b><small>${ctx.self ? "te quedan" : "quedan"}</small></div></div>
+        ${porTipo(p, ctx.classes, used, ctx.self)}
         <div class="sp-barra" role="progressbar" aria-valuemin="0" aria-valuemax="${tot}" aria-valuenow="${used}" aria-label="Clases tomadas"><i style="width:${tot ? (used / tot) * 100 : 0}%"></i></div>
         <p class="sp-small">Comprado el ${M.fmtDate(p.purchase_date)} · <strong>Vence el ${M.fmtDate(vence)}</strong> (${tot > 20 ? "1 año: más de 20 clases" : "6 meses: 20 clases o menos"})</p>${ctx.self ? upgrade(p) : ""}`;
     }
+    if (ctx.passes) paq += `<div class="sp-pases">${ctx.passes}<p class="sp-small">Pases libres: cubren una cancelación tardía o una inasistencia (personalizada o grupal) sin descontar la clase.</p></div>`;
     const pr = ctx.prof || {}, hasBio = [pr.goals, pr.likes, pr.personality].some((a) => a && a.length);
     const est = pr.style_visual != null ? { Visual: pr.style_visual, Auditivo: pr.style_auditory, "Kinestésico": pr.style_kinesthetic } : null;
     const lvl = cur || next;
     const nota = ctx.note === undefined ? "" : card(`Nota privada del profesor <span class="sp-tag">Solo staff</span>`, ctx.note && ctx.note.notes ? `<p>${esc(ctx.note.notes)}</p>` : `<p class="sp-pend">Aún no hay notas privadas.</p>`, "ancho st-nota");
     return `<div class="sp-grid">${nota}
-      ${card("Datos", `<dl class="sp-dl"><dt>Estudiante</dt><dd>${esc(s.full_name || "—")}</dd><dt>En MEC desde</dt><dd>${s.start_date ? M.fmtDate(String(s.start_date).length === 10 ? s.start_date + "T12:00:00Z" : s.start_date) : "—"}</dd><dt>Programa</dt><dd>${s.program === "kids" ? "Kids" : "Adultos"}</dd><dt>Teacher</dt><dd>${esc(s.teacher_name || "Por asignar")}</dd>
+      ${card("Datos", `<dl class="sp-dl"><dt>Estudiante</dt><dd>${esc(s.full_name || "—")}</dd><dt>En MEC desde</dt><dd>${s.start_date ? M.fmtDate(String(s.start_date).length === 10 ? s.start_date + "T12:00:00Z" : s.start_date) : "—"}</dd><dt>Modalidad</dt><dd>${s.program === "kids" ? "Kids" : "Adultos"}</dd><dt>Teacher</dt><dd>${esc(s.teacher_name || "Por asignar")}</dd>
         <dt>Nivel actual</dt><dd>${lvl ? `<span class="sp-nivel">${lvl.levelCode}</span> ${lvl.sub ? "Subnivel " + lvl.levelCode + "." + lvl.sub : "Repaso"} · ${esc(lvl.levelName || s.level_name || "")}` : "—"}</dd></dl>`)}
       ${card(ctx.self ? "Mi paquete" : "Paquete", paq)}
-      ${card("Clases anteriores", past.length ? `<ol class="sp-hist">${past.slice(0, 12).map((c) => `<li><time datetime="${c.starts_at}">${M.fmtDate(c.starts_at)}</time><span>${esc(c.title || M.classInfo(c.class_number, s.program).title)}</span></li>`).join("")}</ol>${past.length > 12 ? `<p class="sp-small">… y ${past.length - 12} más.</p>` : ""}` : `<p class="sp-pend">Aún no hay clases anteriores.</p>`)}
-      ${card("Clase actual", cur ? `<p class="sp-cod">${esc(cur.title)}</p><p class="sp-small">Clase ${((done - 1) % 32) + 1} de 32 del curso de nivel.</p>` : `<p class="sp-pend">Aún no hay clases completadas.</p>`)}
-      ${card("Próxima clase", next ? `<p class="sp-cod">${esc(next.title)}</p>` + (sched ? `<div class="sp-variante ok"><span class="sp-tag ok">Agendada</span><span>${M.fmtDateTime(sched.starts_at)} · Teacher ${esc(sched.teacher_name || s.teacher_name || "")}</span></div>`
-        : `<div class="sp-variante"><span class="sp-tag">Sin agendar</span>${ctx.agendar ? `<a class="sp-btn" href="${ctx.agendar}">Agendar</a>` : ""}</div>`) : `<p class="sp-pend">Todos los cursos completados.</p>`)}
-      ${card(ctx.self ? "Mis feedbacks" : "Feedbacks", fbs.length ? `<ul class="sp-fb">${fbs.slice(0, 8).map((c) => `<li><div class="sp-fb-h"><strong>${esc(c.title || "")}</strong><time>${M.fmtDate(c.starts_at)}</time></div>${c.teacher_note ? `<p>${esc(c.teacher_note)}</p>` : ""}${c.sentences && c.sentences.length ? `<p class="sp-small">Frases: ${c.sentences.map(esc).join(" · ")}</p>` : ""}</li>`).join("")}</ul>` : `<p class="sp-pend">Aún no hay feedback.</p>`, "ancho")}
+      ${historyCard(s, ctx.classes)}
+      ${currentCard(s)}
+      ${nextCard(s, ctx.classes, ctx.agendar)}
+      ${card(ctx.self ? "Mis feedbacks" : "Feedbacks", (fbs.length ? `<ul class="sp-fb">${fbs.slice(0, 8).map((c) => `<li${ctx.fbLink ? ` class="sp-fb-click"` : ""}>${ctx.fbLink ? `<a class="sp-fb-a" href="#feedback/${encodeURIComponent(c.id)}" aria-label="Ver el feedback completo de ${esc(c.class_number ? M.classCode(c.class_number) : (c.title || "la clase"))}"></a>` : ""}<div class="sp-fb-h"><strong>${M.kindChip(c)} ${esc(c.class_number ? M.classCodeTopic(c.class_number, s.program) : (c.title || ""))}</strong><time>${M.fmtDate(c.starts_at)}</time></div>${c.teacher_note ? `<p>${esc(c.teacher_note)}</p>` : ""}${c.sentences && c.sentences.length ? `<p class="sp-small">Frases: ${c.sentences.map(esc).join(" · ")}</p>` : ""}</li>`).join("")}</ul>` : `<p class="sp-pend">Aún no hay feedback.</p>`) + (ctx.mes || ""), "ancho")}
       ${card(`${ctx.self ? "Mi BIO" : "BIO"} ${pr.bio_status === "completa" ? '<span class="sp-tag ok">Completa</span>' : '<span class="sp-tag">En construcción</span>'}`, (ctx.self ? `<p class="sp-small">Tu teacher la va completando a medida que te conoce.</p>` : "") +
         (hasBio ? `<div class="sp-bio"><div><h3>Metas</h3>${lista(pr.goals)}</div><div><h3>Gustos</h3>${lista(pr.likes)}</div><div><h3>Personalidad</h3>${lista(pr.personality)}</div></div>` : `<p class="sp-pend">Aún no hay BIO.</p>`), "ancho")}
-      ${card(`${ctx.self ? "Mi progreso" : "Progreso"} · Marco Común Europeo`, mcerSvg(mcer(done)) + `<p class="sp-small">Avance por curso de nivel: cada curso tiene 32 clases y 5 subniveles.</p>`)}
+      ${card(`${ctx.self ? "Mi progreso" : "Progreso"} · Marco Común Europeo`, mcerSvg(mcer(done)) + (cur ? `<p class="sp-small">Calculado con las clases completadas del curso ${cur.levelCode} (${cur.pos} de 32). Cada curso tiene 5 subniveles.</p>` : `<p class="sp-small">Cada curso de nivel tiene 32 clases y 5 subniveles.</p>`))}
       ${card("Estilo de aprendizaje", (est ? estiloSvg(est) : `<p class="sp-pend">Aún no hay estilo de aprendizaje registrado.</p>`) + (ctx.self ? `<p><button type="button" class="sp-btn" data-pf-test aria-describedby="pf-test-n">Hacer test</button> <span id="pf-test-n" class="sp-small" hidden>Próximamente</span></p>` : ""))}
     </div>`;
   }
@@ -203,5 +237,5 @@
   function editTeacher(tid, name, opts) {
     M.modal(`<h2>Perfil público · ${esc(name)}</h2><div id="tp-m"></div>`, () => teacherForm(M.$("#tp-m"), tid, name, Object.assign({ modal: true }, opts)));
   }
-  M.perfil = { mcerCard: (done) => card("Mi progreso · Marco Común Europeo", mcerSvg(mcer(done)) + `<p class="sp-small">Avance por curso de nivel (32 clases cada uno).</p>`), misClases, teachersView, studentsBrowser, bindTest, editStudent, teacherForm, editTeacher };
+  M.perfil = { porTipo, currentCard, historyCard, nextCard, mcerCard: (done) => card("Mi progreso · Marco Común Europeo", mcerSvg(mcer(done)) + `<p class="sp-small">Avance por curso de nivel (32 clases cada uno).</p>`), misClases, teachersView, studentsBrowser, bindTest, editStudent, teacherForm, editTeacher };
 })();
