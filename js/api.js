@@ -73,7 +73,7 @@
     const busyAt = (list, t) => list.some((c) => c.status !== "cancelled" && Math.abs(new Date(c.starts_at) - t) < 3600e3);
     function checkAvail(tid, start, who) {
       const t = teach(tid), p = M.bog(start);
-      if (t.availability.length && !t.availability.some(([d, a, b]) => d === p.dow && p.h >= a && p.h < b)) throw new Error(`${who} no tiene disponibilidad en ese bloque`);
+      if (!(t.availability || []).some(([d, a, b]) => d === p.dow && p.h >= a && p.h < b)) throw new Error(`${who} no tiene disponibilidad en ese bloque`);
     }
     function complete(c) {
       const s = stu(c.student_id), pointer = s.start_class_number - 1 + s.classes_completed;
@@ -195,7 +195,7 @@
         const start = new Date(o.starts_at), iso = start.toISOString();
         if (!M.isValidSlot(start)) throw new Error("Fuera del horario de clases (L-V 6:00-18:00, sáb 10:00-16:00, hora Bogotá, en punto)");
         const t = teach(o.teacher_id), p = M.bog(start);
-        if (t.availability.length && !t.availability.some(([d, a, b]) => d === p.dow && p.h >= a && p.h < b)) throw new Error("El teacher no tiene disponibilidad en ese bloque");
+        if (!(t.availability || []).some(([d, a, b]) => d === p.dow && p.h >= a && p.h < b)) throw new Error("El teacher no tiene disponibilidad en ese bloque");
         const busy = (c) => c.status !== "cancelled" && Math.abs(new Date(c.starts_at) - start) < 3600e3;
         if (db.classes.some((c) => c.teacher_id === o.teacher_id && busy(c))) throw new Error("Doble reserva: el teacher ya tiene una clase en ese bloque");
         if (db.classes.some((c) => c.student_id === o.student_id && busy(c))) throw new Error("Doble reserva: el estudiante ya tiene una clase en ese bloque");

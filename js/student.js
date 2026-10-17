@@ -56,7 +56,7 @@
       const minT = Date.now() + b.min_request_hours * 3600e3, locked = b.payment_blocked || b.available_to_request < 1;
       const shownT = teachers.filter((t) => !calFilter || t.id === calFilter);
       const pend = reqs.filter((r) => r.status === "pending"), own = mine.filter((c) => c.status !== "cancelled");
-      const avail = (t, p) => !t.availability || !t.availability.length || t.availability.some(([d, a, z]) => d === p.dow && p.h >= a && p.h < z);
+      const avail = (t, p) => (t.availability || []).some(([d, a, z]) => d === p.dow && p.h >= a && p.h < z);
       const at = (iso) => ({ own: own.find((c) => c.starts_at === iso), req: pend.find((r) => r.starts_at === iso), busy: busy.filter((x) => x.starts_at === iso && !x.mine) });
       const freeAt = (slot) => { const iso = slot.toISOString(), p = M.bog(slot), a = at(iso);
         if (a.own || a.req || slot.getTime() < minT) return [];
@@ -75,7 +75,7 @@
         return f.length ? { cls: "free", attrs: `data-slot="${slot.toISOString()}" tabindex="0" role="button" aria-label="Agendar ${M.DOW[p.dow]} ${hh(h)}" title="Agendar ${M.DOW[p.dow]} ${hh(h)}"` } : { cls: "off" }; };
       const today = M.bog(new Date()), hoy = own.filter((c) => { const q = M.bog(c.starts_at); return q.y === today.y && q.m === today.m && q.d === today.d; }).length;
       const left = tc ? `${tc.personal_left} personalizada${tc.personal_left === 1 ? "" : "s"} · ${tc.group_left} grupal${tc.group_left === 1 ? "" : "es"}` : `${b.available_to_request} clase${b.available_to_request === 1 ? "" : "s"}`;
-      app.innerHTML = M.agenda.render({ week, teachers, colors, filter: calFilter, cls: "agv-est", title: "Calendario", tag: "Tu agenda de clases",
+      app.innerHTML = M.agenda.render({ week, teachers, colors, filter: calFilter, cls: "agv-est", bands: shownT, cell, title: "Calendario", tag: "Tu agenda de clases",
         pergamino: hoy ? `Hoy: ${hoy} clase${hoy === 1 ? "" : "s"} tuya${hoy === 1 ? "" : "s"}` : `Puedes agendar: ${left}`,
         above: `<div class="agv-avisos">${M.paymentBanner(b)}${s.hasPackage ? "" : `<div class="panel"><p class="sp-pend">${S.SIN_PAQ}. Cuando tengas uno podrás agendar clases.</p><a class="btn sm" href="precios.html">Ver paquetes y precios</a></div>`}</div>`,
         legend: `<div class="agv-ley"><span><i class="lf"></i>Libre · clic para agendar</span><span><i class="lo"></i>Tu clase</span><span><i class="lp"></i>Tu solicitud pendiente</span><span><i class="lb"></i>Ocupado</span><span><i class="lx"></i>No disponible</span><span class="agv-saldo">Te quedan: <b>${left}</b></span></div>`,

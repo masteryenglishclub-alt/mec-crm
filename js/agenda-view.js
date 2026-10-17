@@ -16,10 +16,19 @@
   const svg = (k, cl = "") => `<svg viewBox="0 0 24 24" class="${cl}" aria-hidden="true">${IC[k]}</svg>`;
   const ini = (n) => String(n || "?").replace(/^Teacher\s+/i, "").split(/\s+/).filter(Boolean).slice(-2).map((x) => x[0]).join("").toUpperCase();
   const hh = (h) => String(h).padStart(2, "0") + ":00";
+  const isAv = (t, dow, h) => (t.availability || []).some(([d, a, z]) => d === dow && h >= a && h < z);
+  /* Rango de horas: de la primera a la última hora con disponibilidad de los teachers mostrados (o.bands, si no o.teachers) o con algún
+     bloque de esa semana. Sin disponibilidad ni bloques: 06–17 como antes. */
+  function hourRange(o, days) {
+    let lo = 24, hi = -1; const ts = o.bands || o.teachers || [];
+    ts.forEach((t) => (t.availability || []).forEach(([, a, z]) => { lo = Math.min(lo, a); hi = Math.max(hi, z - 1); }));
+    (o.blocks || []).forEach((b) => { const p = M.bog(b.starts_at); if (days.some((d) => { const q = M.bog(d); return q.y === p.y && q.m === p.m && q.d === p.d; })) { lo = Math.min(lo, p.h); hi = Math.max(hi, p.h); } });
+    return hi < 0 ? [6, 17] : [lo, hi];
+  }
   /* o = { week, teachers:[{id,full_name}], colors, filter, blocks:[{id, starts_at, kind, icon, title, sub, teacher_id, tip, status, extra}],
            cell(slot, valid) -> {cls, attrs}, pergamino, help, hint, cta, ariaMain } */
   function render(o) {
-    const esc = M.esc, days = [1, 2, 3, 4, 5, 6].map((i) => new Date(o.week.getTime() + (i - 1) * 864e5)), H0 = 6, H1 = 17;
+    const esc = M.esc, days = [1, 2, 3, 4, 5, 6].map((i) => new Date(o.week.getTime() + (i - 1) * 864e5)), [H0, H1] = hourRange(o, days), rowH = H1 - H0 + 1 > 14 ? 64 : 92;
     const today = M.bog(new Date());
     let g = `<div class="agv-hd agv-hcol">${svg("clock")}<span>Hora</span></div>` + days.map((d) => { const p = M.bog(d), now = p.y === today.y && p.m === today.m && p.d === today.d;
       return `<div class="agv-hd${now ? " hoy" : ""}">${M.DOW[p.dow]} ${String(p.d).padStart(2, "0")}/${String(p.m).padStart(2, "0")}</div>`; }).join("");
@@ -27,7 +36,8 @@
       g += `<div class="agv-hora" style="grid-row:${h - H0 + 2}">${hh(h)}</div>`;
       days.forEach((d, i) => { const p = M.bog(d), slot = M.bogDate(p.y, p.m, p.d, h), valid = M.isValidSlot(slot);
         const c = o.cell ? o.cell(slot, valid, p, h) : { cls: valid ? "free" : "off", attrs: valid ? `data-slot="${slot.toISOString()}" title="Agendar ${M.DOW[p.dow]} ${hh(h)}"` : "" };
-        g += `<div class="agv-celda ${c.cls}" style="grid-row:${h - H0 + 2};grid-column:${i + 2}" ${c.attrs || ""}></div>`; });
+        const bd = o.bands ? o.bands.filter((t) => isAv(t, p.dow, h)) : [];   // franjas de disponibilidad por teacher (lado a lado)
+        g += `<div class="agv-celda ${c.cls}${bd.length ? " agv-conb" : ""}" style="grid-row:${h - H0 + 2};grid-column:${i + 2}" ${c.attrs || ""}>${bd.length ? `<span class="agv-bands" aria-hidden="true">${bd.map((t) => `<i style="--tc:${o.colors[t.id] || "#5d6b80"}"></i>`).join("")}</span>` : ""}</div>`; });
     }
     (o.blocks || []).forEach((b) => { const p = M.bog(b.starts_at), di = days.findIndex((d) => { const q = M.bog(d); return q.y === p.y && q.m === p.m && q.d === p.d; });
       if (di < 0 || p.h < H0 || p.h > H1) return;
@@ -42,7 +52,7 @@
           <div class="agv-tool"><div class="agv-nav"><button type="button" class="agv-btn" id="prev"><b>‹</b> Semana anterior</button><button type="button" class="agv-btn oro" id="today">Hoy</button><button type="button" class="agv-btn" id="next">Semana siguiente <b>›</b></button></div>
             <div class="agv-rango">${svg("cal", "agv-ic")}<div><strong>${M.fmtDate(o.week)} – ${M.fmtDate(wEnd)}</strong><small>Hora: Bogotá (UTC-5) · Bloques de 60 min (55 + 5)</small></div></div>
             <label class="agv-sel">${svg("one", "agv-ic")}<span class="sr-only">Filtrar por teacher</span><select id="tf"><option value="">Todos los teachers</option>${o.teachers.map((t) => `<option value="${t.id}" ${t.id === o.filter ? "selected" : ""}>${esc(t.full_name)}</option>`).join("")}</select></label></div>
-          ${o.legend || ""}<div class="agv-scroll"><div class="agv-grid" style="grid-template-rows:42px repeat(${H1 - H0 + 1},92px)">${g}</div></div>
+          ${o.legend || ""}${o.bands && o.bands.length ? `<div class="agv-ley agv-ley-t" aria-label="Disponibilidad por teacher">${o.bands.map((t) => `<span><i style="background:${o.colors[t.id] || "#5d6b80"}"></i>${esc(t.full_name)}</span>`).join("")}</div>` : ""}<div class="agv-scroll"><div class="agv-grid" style="grid-template-rows:42px repeat(${H1 - H0 + 1},${rowH}px)">${g}</div></div>
           <p class="agv-ayuda">${o.help}</p></section>
         <aside class="agv-side" aria-labelledby="agv-t-h"><div class="agv-marco"><h2 id="agv-t-h">Nuestros teachers</h2>
           <ul class="agv-teachers">${o.teachers.map((t) => `<li><a href="profesor.html?id=${encodeURIComponent(t.id)}" target="_blank" rel="noopener" style="--tc:${o.colors[t.id]}" title="Ver perfil de ${esc(t.full_name)} (pestaña nueva)"><span class="agv-av">${esc(ini(t.full_name))}</span><span class="agv-tn">${esc(t.full_name)}</span></a></li>`).join("") || '<li class="muted">Sin teachers</li>'}</ul>

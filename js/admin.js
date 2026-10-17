@@ -28,7 +28,7 @@
         pergamino: n ? `Hoy: ${n} clase${n === 1 ? "" : "s"} agendada${n === 1 ? "" : "s"}` : "Hoy: sin clases agendadas",
         blocks: shown.map((c) => { const k = kind(c); return { id: c.id, starts_at: c.starts_at, kind: k[0], icon: k[2], title: k[1], status: c.status, teacher_id: c.teacher_id, teacher_name: c.teacher_name,
           sub: `(${c.class_type === "extra_reinforcement" ? "extra" : "1 a 1"}) · ${esc(c.student_name)}`, tip: `${k[1]} · ${c.student_name} · ${c.teacher_name || ""} · ${M.STATUS_LABEL[c.status] || ""}` }; }),
-        help: "Clic en un bloque libre para agendar · clic en una clase para ver detalles · franjas rayadas: fuera del horario (L-V 6:00-18:00, sáb 10:00-16:00). El punto de color indica el teacher." });
+        help: "Clic en un bloque libre para agendar · clic en una clase para ver detalles · horas según la disponibilidad de los teachers (hora Bogotá); la base solo acepta clases dentro de la disponibilidad del teacher. El punto de color indica el teacher." });
       M.$("#prev").onclick = () => { week = new Date(week.getTime() - 7 * 864e5); render(); };
       M.$("#next").onclick = () => { week = new Date(week.getTime() + 7 * 864e5); render(); };
       M.$("#today").onclick = () => { week = M.weekStart(new Date()); render(); };
@@ -126,7 +126,7 @@
         <p>Perfil público: ${!pf ? '<span class="tag">Sin perfil</span>' : pf.published ? '<span class="tag r-approved">Publicado</span>' : '<span class="tag r-pending">Sin publicar</span>'}
         <button class="btn sm" data-tpedit="${x.id}">${pf ? "Editar perfil" : "Crear perfil"}</button></p>
         <label>Enlace fijo de Google Meet</label><div class="row"><input value="${M.esc(x.meet_url || "")}" data-meet="${x.id}" placeholder="https://meet.google.com/xxx-xxxx-xxx"><button class="btn" style="flex:0 0 auto" data-save="${x.id}">Guardar</button></div>
-        <p class="muted small" style="margin-top:8px">Disponibilidad: ${(x.availability || []).map(([d, a, b]) => `${M.DOW[d]} ${a}:00–${b}:00`).join(" · ") || "sin registrar (se permite cualquier bloque del horario general)"}</p></div>`; }).join("");
+        <p class="muted small" style="margin-top:8px">Disponibilidad: ${(x.availability || []).map(([d, a, b]) => `${M.DOW[d]} ${a}:00–${b}:00`).join(" · ") || "sin registrar (no se le pueden agendar clases hasta cargarla)"}</p></div>`; }).join("");
       M.$$("[data-tpedit]").forEach((b) => (b.onclick = M.wrapErr(async () => { const x = t.find((y) => y.id === b.dataset.tpedit);
         M.perfil.editTeacher(x.id, x.full_name, { admin: true, onSaved: render }); })));
       M.$$("[data-save]").forEach((b) => (b.onclick = M.wrapErr(async () => {

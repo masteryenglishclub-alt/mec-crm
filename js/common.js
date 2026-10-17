@@ -28,14 +28,20 @@
         ${r.decision_note && r.status !== "pending" ? `<br><span class="small muted">Nota: ${M.esc(r.decision_note)}</span>` : ""}</div>
       <div>${r.status === "pending" && !opts.readOnly ? `<button class="btn ok sm" data-ap="${r.id}" ${r.conflict || r.payment_blocked ? "disabled" : ""}>Aprobar</button> <button class="btn red sm" data-rj="${r.id}">Rechazar</button>` : ""}</div></div>`;
     return `<div class="panel rune"><h3>Pendientes de aprobación (${pend.length})</h3>${opts.readOnly ? '<p class="small muted">Solo lectura: el admin aprueba o rechaza las solicitudes.</p>' : ""}${pend.map(row).join("") || '<p class="muted">No hay solicitudes pendientes.</p>'}
-      <p class="small muted">Al aprobar, la base de datos vuelve a verificar horario (L-V 6-18, sáb 10-16, Bogotá), disponibilidad, doble reserva y pago del paquete.</p></div>
+      <p class="small muted">Al aprobar, la base de datos vuelve a verificar la disponibilidad del teacher (hora Bogotá), doble reserva y pago del paquete.</p></div>
       <div class="panel"><h3>Decididas recientemente</h3>${done.map(row).join("") || '<p class="muted">—</p>'}</div>`;
   };
   /** Color por teacher: el del perfil público si existe; si no, paleta fija por orden */
   M.PALETTE = ["#2f7fe0", "#c0862a", "#3ccf8e", "#a989e6", "#e4606a", "#2bb5c4"];
   M.teacherColors = function (teachers, profiles) {
-    const o = {}; (teachers || []).forEach((t, i) => { const p = (profiles || []).find((x) => x.teacher_id === t.id);
-      o[t.id] = p && /^#[0-9a-fA-F]{6}$/.test(p.color) ? p.color : M.PALETTE[i % M.PALETTE.length]; }); return o;
+    // Color propio (teacher_public_profiles.color; #2f7fe0 = valor por defecto de la base = «sin color»). Sin color: siguiente de la
+    // paleta, saltando los que se parecen a un color ya elegido (p. ej. el dorado #c0862a junto al naranja de Diego).
+    const own = (t) => { const p = (profiles || []).find((x) => x.teacher_id === t.id); return p && /^#[0-9a-fA-F]{6}$/.test(p.color) && p.color.toLowerCase() !== "#2f7fe0" ? p.color : null; };
+    const rgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)), near = (x, y) => { const a = rgb(x), b = rgb(y); return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) < 90; };
+    const o = {}, used = (teachers || []).map(own).filter(Boolean); let k = 0;
+    (teachers || []).forEach((t) => { const c = own(t); if (c) { o[t.id] = c; return; }
+      let pick = null; for (let n = 0; n < M.PALETTE.length && !pick; n++) { const cand = M.PALETTE[(k + n) % M.PALETTE.length]; if (!used.some((u) => near(u, cand))) { pick = cand; k += n + 1; } }
+      o[t.id] = pick || M.PALETTE[k++ % M.PALETTE.length]; used.push(o[t.id]); }); return o;
   };
   /** Tabla nórdica de solicitudes con color por teacher (admin). Conserva data-ap / data-rj para M.bindRequests */
   M.requestsTable = function (reqs, colors) {
@@ -127,9 +133,7 @@
   M.isValidSlot = function (d) {
     const p = M.bog(d);
     if (p.min !== 0) return false;
-    if (p.dow >= 1 && p.dow <= 5) return p.h >= 6 && p.h <= 17;
-    if (p.dow === 6) return p.h >= 10 && p.h <= 15;
-    return false;
+    return p.dow >= 1 && p.dow <= 6; // sin ventana global: cada teacher define su horario (la base exige que caiga en su disponibilidad)
   };
   const fmt = (o) => new Intl.DateTimeFormat("es-CO", Object.assign({ timeZone: M.TZ }, o));
   M.fmtDateTime = (d) => fmt({ weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(d)) + " (Bogotá)";
