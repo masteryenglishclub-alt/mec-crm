@@ -111,7 +111,7 @@ body.crm-n{overflow-x:hidden}
   background:url(../img/web/agenda-puerto.webp) center top/100vw auto no-repeat;
   -webkit-mask-image:linear-gradient(180deg,transparent 0,#000 80px);mask-image:linear-gradient(180deg,transparent 0,#000 80px)}
 .agv::after{content:"";position:absolute;z-index:0;left:0;right:0;bottom:0;pointer-events:none;
-  top:calc(100vw*911/1536 - 80px + 100vw*400/1280 - 2px);background:url(../img/web/agenda-muelle.jpg) center top/100vw auto repeat-y}
+  top:calc(100vw*911/1536 - 80px + 100vw*400/1280 - 2px);background:url(../img/web/agenda-puerto.jpg) center top/100vw auto repeat-y}
 .agv-top,.agv-wrap{z-index:2}
 /* marco de hilo dorado */
 .agv-main,.agv-side{border:1px solid #d9ad5c;outline:1px solid #8a6a30;outline-offset:4px;box-shadow:0 0 0 1px #000,0 18px 50px rgba(0,0,0,.6);margin:6px}

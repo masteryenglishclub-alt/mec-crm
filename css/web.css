@@ -291,3 +291,4 @@ a.ct-card:hover,a.ct-card:focus-visible{text-decoration:none;border-color:#f0c46
 @media (max-width:1000px){.contacto-hero,.ct-cards{margin-left:auto;margin-right:auto}}
 @media (max-width:700px){.contacto-v3{min-height:0}.contacto-v3 .contacto-bg{position:relative;inset:auto;height:auto;display:block}.contacto-v3 .contacto-bg img{position:static;display:block;height:auto;aspect-ratio:640/472}
  .ct-cards{grid-template-columns:1fr}}
+.meto-nivel{font:800 .85rem var(--display);color:#7fdcff;text-transform:uppercase;letter-spacing:.05em;margin:12px 0 8px}.meto-libro img{aspect-ratio:3/4;object-fit:cover}
