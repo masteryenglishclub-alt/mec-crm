@@ -12,7 +12,7 @@
   const pp = P.personalizadas.paquetes, gp = P.grupales.paquetes, cp = P.combinados.paquetes;
   $("#p-pers").innerHTML = pp.map((k, i) => card(k, "Paquete " + k.id, k.clases + " clases", k.clases, k.clases * L.pers, i === pp.length - 1)).join("");
   $("#p-grup").innerHTML = gp.map((k, i) => card(k, "Paquete " + k.id, k.clases + " clases", k.clases, k.clases * L.grup, i === gp.length - 1)).join("");
-  $("#p-comb").innerHTML = cp.map((k, i) => card(k, "Combo " + k.id, `${k.pers + k.grup} clases (${k.pers} personalizadas + ${k.grup} grupales)`, k.pers + k.grup, k.pers * L.pers + k.grup * L.grup, i === cp.length - 1)).join("");
+  $("#p-comb").innerHTML = cp.map((k, i) => card(k, "Combo " + String(k.id).replace(/^C/, ""), `${k.pers + k.grup} clases (${k.pers} personalizadas + ${k.grup} grupales)`, k.pers + k.grup, k.pers * L.pers + k.grup * L.grup, i === cp.length - 1)).join("");
   const ps = P.personalizadas.suelta;
   $("#s-pers").innerHTML = `Clase suelta personalizada: <s>${cop(ps.lista)}</s> <strong>${cop(ps.cop)}</strong> <span class="etq">Descuento especial ${ps.desc}%</span>`;
   $("#s-grup").innerHTML = `Clase suelta grupal: <strong>${cop(P.grupales.suelta.cop)}</strong>`;
