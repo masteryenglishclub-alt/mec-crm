@@ -1,0 +1,20 @@
+/* MEC · Espacio para anuncios (js/anuncios.js + js/anuncios-config.js). Oculto mientras no haya un anuncio activo y completo. */
+.ad-slot{margin:0 10px 26px}
+.ad-slot[hidden]{display:none}
+.ad-card{position:relative;display:grid;grid-template-columns:minmax(0,260px) 1fr;gap:6px 24px;align-items:center;padding:18px 22px;background:linear-gradient(120deg,rgba(40,28,10,.92),rgba(8,12,22,.92));border:1px solid #d9ad5c;outline:1px solid #8a6a30;outline-offset:4px;border-radius:4px;box-shadow:0 0 0 1px #000,0 18px 50px rgba(0,0,0,.6);color:#f2eadb;text-decoration:none}
+.ad-card.sin-img{grid-template-columns:1fr}
+.ad-card img{display:block;width:100%;height:auto;max-height:190px;object-fit:cover;border:1px solid #8a6a30;border-radius:3px}
+.ad-card .ad-kicker{font:800 .72rem var(--display);letter-spacing:.16em;text-transform:uppercase;color:#d9ad5c}
+.ad-card h3{font:800 1.4rem var(--display);color:#f3d38c;margin:2px 0 4px}
+.ad-card p{margin:0 0 8px}
+.ad-card .ad-legal{font-size:.8rem;color:#cfd8e4}
+.ad-card .sp-btn,.ad-card .btn{margin-top:4px}
+.ad-card .ad-marca{position:absolute;top:8px;right:10px;font:800 .66rem var(--display);letter-spacing:.12em;text-transform:uppercase;color:#1b1204;background:#f0c46a;padding:2px 8px;border-radius:3px}
+.ad-card.ad-muestra{border-style:dashed}
+@media (max-width:640px){.ad-card{grid-template-columns:1fr;padding:14px 14px}.ad-slot{margin:0 6px 20px}}
+/* Anuncio en páginas públicas / login (tema web) */
+.ad-slot.ad-web{margin:0 auto 22px;max-width:1100px;padding:0 20px}
+.ad-slot.ad-top{margin:0;max-width:none;padding:0}
+.ad-slot.ad-top .ad-card{border-radius:0;outline:0;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px 18px;text-align:center;padding:10px 20px;box-shadow:none;border-width:0 0 1px 0}
+.ad-slot.ad-top .ad-card img{display:none}
+.ad-slot.ad-top .ad-card h3{font-size:1rem;margin:0}.ad-slot.ad-top .ad-card p{margin:0}.ad-slot.ad-top .ad-kicker{display:none}

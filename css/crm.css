@@ -105,3 +105,15 @@ td{border-bottom:1px solid var(--line);padding:8px;vertical-align:top}
 .decision{font:800 1.3rem var(--display)}.decision.sube{color:var(--ok)}.decision.refuerzo{color:var(--warn)}.decision.repite{color:var(--red)}
 .modal .panel.wide{width:min(980px,100%)}
 .alert{border-radius:10px;padding:10px 12px;margin:12px 0;text-align:left;font-size:.9rem;line-height:1.4}.alert.err{background:rgba(180,40,40,.14);border:1px solid rgba(220,80,80,.55)}
+
+/* Contraseña: modal de cambio y bloqueo del primer ingreso (mismo panel nórdico) */
+.pwm{text-align:left}.pwm-logo{display:block;margin:0 auto 6px;border-radius:50%;filter:drop-shadow(0 4px 10px rgba(0,0,0,.5))}
+.pwm h2{margin:6px 0 4px}.pwm form{margin-top:4px}
+.pwm-rules{list-style:none;margin:10px 0 0;padding:10px 12px;border:1px solid var(--line-2);border-radius:10px;font-size:.86rem;display:grid;gap:3px}
+.pwm-rules li{color:var(--muted)}.pwm-rules li.ok{color:#7fd3a0}.pwm-rules li span{display:inline-block;width:1.1em;font-weight:700}
+.pwm-err{margin:10px 0 0;padding:9px 12px;border-radius:10px;border:1px solid #d9534f;background:rgba(217,83,79,.14);color:#ffb4b0;font-weight:600}
+.pwm-acc{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}.pwm-acc .btn{flex:1 1 auto;justify-content:center}
+.pwm-done{text-align:center}.pwm-done p{margin:8px 0 0}
+.modal.pwgate{z-index:200;background:radial-gradient(ellipse at top,rgba(16,35,59,.96),rgba(4,8,14,.98))}
+.sp-clave{margin:12px 0 0}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}

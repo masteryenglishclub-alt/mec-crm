@@ -292,3 +292,26 @@ a.ct-card:hover,a.ct-card:focus-visible{text-decoration:none;border-color:#f0c46
 @media (max-width:700px){.contacto-v3{min-height:0}.contacto-v3 .contacto-bg{position:relative;inset:auto;height:auto;display:block}.contacto-v3 .contacto-bg img{position:static;display:block;height:auto;aspect-ratio:640/472}
  .ct-cards{grid-template-columns:1fr}}
 .meto-nivel{font:800 .85rem var(--display);color:#7fdcff;text-transform:uppercase;letter-spacing:.05em;margin:12px 0 8px}.meto-libro img{aspect-ratio:3/4;object-fit:cover}
+
+/* ---- Eventos (página pública): mismo lenguaje que Contáctanos/Precios: portada nórdica, etiqueta dorada, tarjetas con marco ---- */
+.eventos-v3{position:relative;overflow:hidden;background:#07090d;padding-bottom:60px}
+.eventos-v3 .ev-bg{position:absolute;left:0;right:0;top:0;height:clamp(300px,34vw,430px)}
+.eventos-v3 .ev-bg img{display:block;width:100%;height:100%;object-fit:cover;object-position:50% 38%}
+.eventos-v3 .ev-bg::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(7,9,13,.78),rgba(7,9,13,.35) 60%,rgba(7,9,13,.1)),linear-gradient(transparent 55%,#07090d)}
+.ev-hero{position:relative;z-index:2;max-width:1100px;margin:0 auto;padding:clamp(40px,6vw,84px) 20px 0;min-height:clamp(220px,26vw,330px)}
+.ev-hero .ct-tag{display:inline-block}
+.ev-hero h1{font:800 clamp(2.2rem,4vw,3.6rem) var(--display);margin:10px 0 8px;text-shadow:0 2px 18px rgba(0,0,0,.85)}
+.ev-hero .lead{color:#eef2f7;text-shadow:0 1px 8px rgba(0,0,0,.9);max-width:34em}
+.ev-body{position:relative;z-index:2;max-width:1100px;margin:0 auto;padding:0 20px}
+.ev-pub-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:30px 24px;margin-top:10px}
+.ev-pub{position:relative;display:grid;grid-template-columns:auto 1fr;gap:4px 16px;padding:20px 22px;background:rgba(8,16,28,.92);border:1px solid #c9a15e;border-radius:8px;box-shadow:0 14px 32px rgba(0,0,0,.55)}
+.ev-pub .ev-fecha{grid-row:1/span 4;width:72px;border:1px solid #c9a15e;border-radius:6px;text-align:center;padding:8px 4px;background:rgba(0,0,0,.35);line-height:1.05}
+.ev-pub .ev-fecha .ev-dow,.ev-pub .ev-fecha .ev-mes{display:block;font:700 .72rem var(--display);letter-spacing:.14em;text-transform:uppercase;color:#f0c46a}
+.ev-pub .ev-fecha b{display:block;font:800 2rem var(--display);margin:2px 0}
+.ev-pub h2{font:800 1.2rem var(--display);border:0;padding:0;margin:0;color:#fff}.ev-pub h2::after{display:none}
+.ev-pub p{margin:0;color:#c3cdd9;font-size:.92rem}.ev-pub .ev-hora{color:#f0c46a;font-weight:700;font-size:.85rem}
+.ev-pub>*:not(.ev-fecha){grid-column:2}
+.ev-pronto{max-width:640px;margin:26px auto 0;text-align:center;padding:30px 24px;background:rgba(8,16,28,.92);border:1px solid #c9a15e;border-radius:8px;box-shadow:0 14px 32px rgba(0,0,0,.55);position:relative}
+.ev-pronto .medallon{margin-bottom:8px}.ev-pronto .big{font:800 2rem var(--display);margin:4px 0}.ev-pronto .cta-row{justify-content:center;margin-top:14px}
+.ev-portal{max-width:640px;margin:18px auto 0;text-align:center;color:#c3cdd9;font-size:.9rem}
+@media (max-width:700px){.eventos-v3 .ev-bg{height:300px}.ev-hero{padding-top:36px}.ev-pub{grid-template-columns:62px 1fr;gap:4px 12px}.ev-pub .ev-fecha{width:62px}.ev-pub .ev-fecha b{font-size:1.6rem}}

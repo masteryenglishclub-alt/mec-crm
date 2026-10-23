@@ -384,3 +384,29 @@ body.crm-n .gbg .panel .panel::before,body.crm-n .gbg .panel .panel::after,body.
 .smc.fbk::before,.smc.mes::before{position:fixed!important;inset:0!important;background-size:cover!important;background-position:center center!important}
 /* velo habitual para la legibilidad sobre la escena fija */
 .smc.fbk::after,.smc.mes::after{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;background:linear-gradient(180deg,rgba(8,6,4,.38),rgba(8,6,4,.18) 35%,rgba(8,6,4,.42))}
+/* ---- Historial de clases (Inicio) ---- */
+.st-hist .sp-hist-res{margin:6px 0 10px}
+.sp-hist-w{overflow-x:auto}
+.sp-hist-t{width:100%;border-collapse:collapse;font-size:.92rem}
+.sp-hist-t th{text-align:left;font:700 .72rem var(--body,inherit);letter-spacing:.1em;text-transform:uppercase;color:#d9ad5c;padding:6px 10px;border-bottom:1px solid rgba(217,173,92,.4)}
+.sp-hist-t td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.08);vertical-align:top}
+.sp-hist-t td:first-child{white-space:nowrap;color:#cfd8e4}
+.sp-asis{display:inline-block;font:700 .74rem/1.5 var(--body,inherit);padding:1px 9px;border-radius:999px;border:1px solid}
+.sp-asis.a-ok{color:#7ee0b0;border-color:#2f9a6d;background:rgba(60,207,142,.12)}
+.sp-asis.a-tarde{color:#f3d38c;border-color:#c9963f;background:rgba(201,150,63,.15)}
+.sp-asis.a-no{color:#f4a1a6;border-color:#b5444b;background:rgba(228,36,43,.12)}
+.sp-hist-mas{margin-top:10px}.sp-hist-mas summary{cursor:pointer;color:#f3d38c;font-weight:700;padding:6px 0}
+.sp-hist-gap{margin-top:10px;padding:8px 12px;border-left:3px solid #d9ad5c;background:rgba(0,0,0,.35)}
+@media (max-width:640px){
+  .sp-hist-t thead{position:absolute;left:-9999px}.sp-hist-t,.sp-hist-t tbody,.sp-hist-t tr,.sp-hist-t td{display:block;width:100%}
+  .sp-hist-t tr{border:1px solid rgba(217,173,92,.35);border-radius:6px;margin:0 0 10px;padding:6px 4px;background:rgba(0,0,0,.25)}
+  .sp-hist-t td{border:0;padding:3px 10px 3px 100px;position:relative;min-height:1.6em}.sp-hist-t td::before{content:attr(data-l);position:absolute;left:10px;top:5px;color:#d9ad5c;font:700 .7rem var(--body,inherit);letter-spacing:.08em;text-transform:uppercase}
+}
+.sp-hist-t .sp-tag{white-space:nowrap;display:inline-block}
+/* ===== Chat con el teacher: no leídos, contador, abrir chat (propuesta 20261023_chat_docente) ===== */
+.me-n{display:inline-block;min-width:18px;padding:0 6px;margin-left:6px;border-radius:9px;background:#b3261e;color:#fff;font-size:.72rem;font-weight:700;line-height:18px;text-align:center;vertical-align:middle}
+.me-hilo.on .me-n{display:none}
+.me-cuenta{margin:2px 0 0;color:#a9b4c2}.me-cuenta #me-cnt{font-variant-numeric:tabular-nums}
+.me-nuevo{margin-bottom:10px}.me-nuevo select{flex:1;min-width:0}
+#mod-lector{margin-top:14px;border-top:1px solid #5b4524;padding-top:10px}
+#mod-lector .me-msgs{max-height:420px}
