@@ -2,8 +2,9 @@
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Ingresar · Mastery English Club</title><meta name="robots" content="noindex,nofollow">
 <link rel="icon" href="img/favicon.ico"><link rel="apple-touch-icon" href="img/apple-touch-icon-180.png">
-<link rel="stylesheet" href="css/crm.css?v=20261016f"></head>
+<link rel="stylesheet" href="css/crm.css?v=20261017b"><link rel="stylesheet" href="css/anuncios.css?v=20261023a"></head>
 <body>
+<div class="ad-slot ad-top" data-ad-slot="login" hidden></div>
 <div class="login"><div class="panel rune">
   <img src="img/mec-logo-escudo-320.webp" alt="Mastery English Club" width="110" height="110">
   <h1 style="margin-top:10px">MEC · CRM</h1>
@@ -12,15 +13,16 @@
   <form id="setpw" hidden>
     <h2 style="margin:8px 0 4px">Crea tu contraseña</h2>
     <p class="muted small" id="setpw-who"></p>
-    <label for="pw1">Nueva contraseña (mínimo 8 caracteres)</label><input id="pw1" type="password" autocomplete="new-password" minlength="8" required>
+    <label for="pw1" id="pw1-l">Nueva contraseña (mínimo 8 caracteres)</label><input id="pw1" type="password" autocomplete="new-password" minlength="8" required>
     <label for="pw2">Confirmar contraseña</label><input id="pw2" type="password" autocomplete="new-password" minlength="8" required>
     <p style="margin-top:16px"><button class="btn" style="width:100%;justify-content:center">Guardar y entrar</button></p>
   </form>
   <form id="forgot" hidden>
     <h2 style="margin:8px 0 4px">Olvidé mi contraseña</h2>
-    <p class="muted small">Te enviaremos un enlace para crear una nueva contraseña.</p>
-    <label for="femail">Correo</label><input id="femail" type="email" autocomplete="username" required>
-    <p style="margin-top:16px"><button class="btn" style="width:100%;justify-content:center">Enviar enlace</button></p>
+    <p class="muted small" id="forgot-help">Te enviaremos un enlace para crear una nueva contraseña.</p>
+    <label for="femail">Correo o usuario</label><input id="femail" type="text" inputmode="email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="254" required>
+    <p style="margin-top:16px"><button class="btn" id="forgot-btn" style="width:100%;justify-content:center">Enviar enlace</button></p>
+    <p class="small" id="forgot-ok" role="status" aria-live="polite" hidden></p>
     <p class="small"><a href="#" id="back">Volver a ingresar</a></p>
   </form>
   <form id="f">
@@ -37,10 +39,13 @@
     <p class="small" style="margin-top:12px"><a href="#" id="reset">Restablecer datos demo</a></p>
   </div>
 </div></div>
-<script src="js/config.js?v=20261016e"></script><script src="js/common.js?v=20261017d"></script><script src="js/api.js?v=20261017d"></script>
+<script src="js/config.js?v=20261016e"></script><script src="js/common.js?v=20261017b"></script><script src="js/api.js?v=20261017b"></script>
 <script>
 (async () => {
   const M = MEC, go = (u) => (location.href = { admin: "admin.html", teacher: "teacher.html", student: "student.html" }[u.role]);
+  { const rec = M.feature("correo_recuperacion"), h = M.$("#forgot-help"), l = M.$("#pw1-l");
+    if (rec && h) h.textContent = "Escribe tu usuario o tu correo. Enviaremos un enlace al correo de recuperación que registró la administración.";
+    if (l) { l.textContent = M.feature("clave_obligatoria") ? "Nueva contraseña (mínimo 10 caracteres, con letras y números)" : "Nueva contraseña (mínimo 8 caracteres)"; M.$("#pw1").minLength = M.$("#pw2").minLength = M.PW_MIN; } }
   const show = (id) => ["f", "setpw", "forgot"].forEach((x) => (M.$("#" + x).hidden = x !== id));
   // Parámetros de enlaces de Supabase: en el hash (#access_token=…&type=invite / #error=…) o en la query (?code=… / ?error=…)
   const P = new URLSearchParams(location.search);
@@ -51,16 +56,20 @@
   const linkErr = (code, desc) => { const b = M.$("#linkerr"); b.hidden = false;
     b.innerHTML = `<strong>${M.esc(MSG[code] || "No se pudo abrir el enlace. Pide a la administración un nuevo enlace.")}</strong><br><span class="small">Código: ${M.esc(code)}${desc ? " · " + M.esc(desc) : ""}</span>`; };
   const cleanUrl = () => history.replaceState(null, "", location.pathname);
-  M.$("#forgot-link").onclick = (e) => { e.preventDefault();
-    // Las cuentas con usuario (correo sintético, sin buzón) no reciben correos: la contraseña la restablece la administración.
-    if (M.$("#email").value.trim() && M.isUsername(M.$("#email").value)) { M.toast("Si entras con usuario, pide a la administración que restablezca tu contraseña."); return; }
-    M.$("#femail").value = M.$("#email").value; show("forgot"); };
+  M.$("#forgot-link").onclick = (e) => { e.preventDefault(); M.$("#femail").value = M.$("#email").value; show("forgot"); };
   M.$("#back").onclick = (e) => { e.preventDefault(); show("f"); };
   M.$("#forgot").onsubmit = M.wrapErr(async (e) => { e.preventDefault();
-    const fe = M.$("#femail").value.trim().toLowerCase();
-    if (fe.endsWith("@" + M.LOGIN_DOMAIN)) { M.toast("Esta cuenta entra con usuario: pide a la administración que restablezca tu contraseña."); show("f"); return; }
-    await M.api.resetPassword(fe, location.origin + location.pathname);
-    M.toast("Si el correo está registrado, te llegará un enlace."); show("f"); });
+    // Misma respuesta exista o no la cuenta (no se revela nada); el límite real de intentos está en el servidor.
+    const btn = M.$("#forgot-btn"), v = M.$("#femail").value.trim();
+    if (!v) throw new Error("Escribe tu correo o tu usuario");
+    if (btn) btn.disabled = true;
+    const REC = M.feature("correo_recuperacion");
+    if (!REC && M.isUsername(v)) { M.toast("Si entras con usuario, pide a la administración que restablezca tu contraseña."); if (btn) btn.disabled = false; return; }
+    await M.api.requestRecovery(v, location.origin + location.pathname);
+    const rmsg = REC ? M.RECOVERY_MSG : "Si el correo está registrado, te llegará un enlace.";
+    const msg = M.$("#forgot-ok"); if (msg) { msg.hidden = false; msg.textContent = rmsg; }
+    M.toast(rmsg);
+    setTimeout(() => { if (btn) btn.disabled = false; }, 60000); });
   M.$("#f").onsubmit = M.wrapErr(async (e) => { e.preventDefault(); go(await M.api.signIn(M.loginEmail(M.$("#email").value), M.$("#pw").value)); });
 
   if (errCode) { linkErr(P.get("error_code") || errCode, P.get("error_description")); cleanUrl(); }
@@ -73,7 +82,7 @@
       show("setpw");
       M.$("#setpw").onsubmit = M.wrapErr(async (e) => { e.preventDefault();
         const a = M.$("#pw1").value, b = M.$("#pw2").value;
-        if (a.length < 8) throw new Error("La contraseña debe tener al menos 8 caracteres.");
+        if (!M.pwPolicyOk(a)) throw new Error(M.pwPolicyMsg());
         if (a !== b) throw new Error("Las contraseñas no coinciden.");
         await M.api.updatePassword(a); M.toast("Contraseña guardada");
         const u = await M.api.currentUser(); if (u) go(u); else show("f"); });
@@ -89,4 +98,4 @@
   }
 })();
 </script>
-</body></html>
+<script src="js/anuncios-config.js?v=20261023a"></script><script src="js/anuncios.js?v=20261023a"></script></body></html>
