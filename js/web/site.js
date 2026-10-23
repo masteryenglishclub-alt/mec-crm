@@ -19,6 +19,20 @@
   document.querySelectorAll("[data-fb]").forEach((a) => { a.href = D.facebook; });
   const y = $("#year"); if (y) y.textContent = new Date().getFullYear();
 
+  // Eventos públicos (MEC_WEB.eventos): tarjetas con fecha; si no hay ninguno futuro se queda la tarjeta «Pronto»
+  const evl = $("#eventos-lista");
+  if (evl) {
+    const MES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"], DOW = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
+    const fut = (D.eventos || []).filter((e) => e && e.titulo && Date.parse(e.fecha) >= Date.now()).sort((a, b) => Date.parse(a.fecha) - Date.parse(b.fecha));
+    if (fut.length) {
+      const bog = (iso) => { const p = new Intl.DateTimeFormat("es-CO", { timeZone: "America/Bogota", day: "numeric", month: "numeric", weekday: "short", hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(new Date(iso)); const g = (t) => (p.find((x) => x.type === t) || {}).value; return { d: g("day"), m: +g("month"), w: g("weekday").replace(".", ""), h: g("hour") + ":" + g("minute") }; };
+      evl.innerHTML = fut.map((e) => { const b = bog(e.fecha); return `<article class="ev-pub"><div class="ev-fecha" aria-hidden="true"><span class="ev-dow">${esc(b.w)}</span><b>${esc(b.d)}</b><span class="ev-mes">${MES[b.m - 1]}</span></div>
+        <span class="ev-hora">${esc(b.h)} · hora de Bogotá</span><h2>${esc(e.titulo)}</h2>${e.tema ? `<p>Tema: <b>${esc(e.tema)}</b></p>` : ""}${e.texto ? `<p>${esc(e.texto)}</p>` : ""}
+        ${/^https:\/\//.test(e.enlace || "") ? `<p><a class="btn sm" href="${esc(e.enlace)}" target="_blank" rel="noopener">Más información</a></p>` : ""}</article>`; }).join("");
+      evl.hidden = false; const pr = $("#eventos"); if (pr) pr.hidden = true;
+    }
+  }
+
   // Avatar ilustrado (SVG propio, claramente no fotográfico)
   function avatar(a) {
     const hair = a.peinado === "largo" ? `<path d="M22 46c0-22 12-32 28-32s28 10 28 32v34H68V48H32v32H22z" fill="${a.pelo}"/>`

@@ -13,6 +13,9 @@ window.MEC_WEB = {
     { placeholder: true, nombre: "Camille", pais: "Francia", nivel: "A1", avatar: { piel: "#efc9a8", pelo: "#a8643a", ropa: "#3ccf8e", peinado: "moño" },
       texto: "Empecé desde cero y desde la primera clase ya estaba diciendo mis propias frases en inglés." }
   ],
+  /* Eventos confirmados para la página pública (vacío = «Pronto»). Cada uno: { fecha: "2026-11-07T10:00:00-05:00", titulo, tema, texto, enlace? }
+     No inventar fechas: agregar aquí solo eventos confirmados por MEC. */
+  eventos: [],
   paises: [ // marcadores del globo [nombre, lat, lon]
     ["México", 23.6, -102.5], ["Panamá", 8.5, -80.8], ["Colombia", 4.6, -74.1], ["Chile", -33.4, -70.6],
     ["Argentina", -34.6, -58.4], ["España", 40.4, -3.7], ["Francia", 46.6, 2.3], ["China", 35.9, 104.2]
