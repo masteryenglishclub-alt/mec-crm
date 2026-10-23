@@ -9,7 +9,7 @@
   const TIPO = { P: "Personalizadas 1 a 1", G: "Grupales", C: "Combinado" }, ANCLA = { P: "personalizadas", G: "grupales", C: "combinados" };
   const card = (t, body, cls = "") => `<section class="sp-card ${cls}"><h2>${t}</h2>${body}</section>`;
   const lista = (a, vacio = "Por completar") => a && a.length ? `<ul>${a.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : `<p class="sp-pend">${vacio}</p>`;
-  const addMeses = (d, n) => { const x = new Date(d); x.setUTCMonth(x.getUTCMonth() + n); return x.toISOString(); };
+  const addMeses = (d, n) => { const x = M.toDate(d); x.setUTCMonth(x.getUTCMonth() + n); return x.toISOString().slice(0, 10); };  // fecha sola, sin desfase UTC
   const NIV = ["A1", "A2", "B1", "B2", "C1", "C2"];
 
   function mcer(done) { // % completado de cada nivel (32 clases por nivel; C2 no se ofrece aún)
@@ -65,14 +65,36 @@
   const doneOf = (s) => Math.max(0, (s.start_class_number || 1) - 1 + (s.classes_completed || 0));
   const currentCard = (s) => { const done = doneOf(s);
     return card("Clase actual", done > 0 ? `<p class="sp-cod">${esc(M.classCodeTopic(done, s.program))}</p>` : `<p class="sp-pend">Aún no hay clases completadas.</p>`); };
-  const historyCard = (s, classes, title = "Clases anteriores") => { const past = classes.filter((c) => c.status === "completed").sort((a, b) => b.starts_at.localeCompare(a.starts_at));
-    return card(title, past.length ? `${M.kindLegend()}<ol class="sp-hist">${past.slice(0, 12).map((c) => `<li><time datetime="${c.starts_at}">${M.fmtDate(c.starts_at)}</time>${M.kindChip(c)}<span>${esc(c.class_number ? M.classCodeTopic(c.class_number, s.program) : (c.title || "Sesión de refuerzo"))}</span></li>`).join("")}</ol>${past.length > 12 ? `<p class="sp-small">… y ${past.length - 12} más.</p>` : ""}` : `<p class="sp-pend">Aún no hay clases anteriores.</p>`); };
+  /* Historial de clases (Inicio · Historial): clases ya dictadas (completadas / no asistió) con fecha, teacher, tipo y asistencia, más las clases
+     anteriores al sistema que anota el admin (propuesta 20261023_historial_clases). Sin la vista, usa las clases del sistema. */
+  const ATT = { present: ["Asistió", "ok"], late: ["Llegó tarde", "tarde"], absent: ["No asistió", "no"] };
+  const attOf = (r) => r.status === "no_show" || r.attendance === "absent" ? ATT.absent : ATT[r.attendance] || ["Completada", "ok"];
+  const histFrom = (classes) => (classes || []).filter((c) => ["completed", "no_show"].includes(c.status)).map((c) => ({ source: "sistema", ref: c.id, starts_at: c.starts_at, class_number: c.class_number, title: c.title,
+    teacher_name: c.teacher_name, session_kind: c.session_kind, modality: c.modality, class_type: c.class_type, status: c.status, attendance: typeof c.attendance === "string" ? c.attendance : c.attendance && c.attendance.status || null, minutes_attended: c.minutes_attended ?? null }));
+  const histRow = (s, r) => { const [al, ac] = attOf(r), prev = r.source === "previo";
+    return `<tr><td data-l="Fecha"><time datetime="${esc(r.starts_at)}">${M.fmtDate(r.starts_at)}</time></td>
+      <td data-l="Clase">${esc(r.class_number ? M.classCodeTopic(r.class_number, s.program) : (r.title || "Sesión de refuerzo"))}${prev ? ' <span class="sp-tag">Antes del sistema</span>' : ""}</td>
+      <td data-l="Teacher">${r.teacher_name ? esc(r.teacher_name) : '<span class="sp-pend">Sin dato</span>'}</td><td data-l="Tipo">${M.kindChip(r)}</td>
+      <td data-l="Asistencia"><span class="sp-asis a-${ac}">${al}</span>${r.minutes_attended ? ` <span class="sp-small">${r.minutes_attended} min</span>` : ""}</td></tr>`; };
+  const historyCard = (s, classes, title = "Historial de clases", extra = {}) => {
+    const rows = (extra.history || histFrom(classes)).slice().sort((a, b) => b.starts_at.localeCompare(a.starts_at)), N = 8;
+    const asis = rows.filter((r) => attOf(r)[1] !== "no").length, falt = rows.length - asis;
+    const gap = Math.max(0, (extra.used || 0) - rows.length);
+    const tabla = (list) => `<div class="sp-hist-w"><table class="sp-hist-t"><thead><tr><th scope="col">Fecha</th><th scope="col">Clase</th><th scope="col">Teacher</th><th scope="col">Tipo</th><th scope="col">Asistencia</th></tr></thead><tbody>${list.map((r) => histRow(s, r)).join("")}</tbody></table></div>`;
+    return card(title, (rows.length ? `${M.kindLegend()}<p class="sp-small sp-hist-res"><b>${rows.length}</b> clase${rows.length === 1 ? "" : "s"} en tu historial · ${asis} con asistencia${falt ? ` · ${falt} sin asistencia` : ""}</p>${tabla(rows.slice(0, N))}${rows.length > N ? `<details class="sp-hist-mas"><summary>Ver las ${rows.length - N} anteriores</summary>${tabla(rows.slice(N))}</details>` : ""}` : `<p class="sp-pend">Aún no hay clases en el historial.</p>`)
+      + (gap > 0 ? `<p class="sp-small sp-hist-gap">El paquete registra <b>${gap}</b> clase${gap === 1 ? "" : "s"} tomada${gap === 1 ? "" : "s"} sin detalle (anteriores al sistema). ${extra.self ? "Si quieres verlas aquí, pídeselo a MEC." : "El admin puede anotarlas en el historial."}</p>` : ""), "ancho st-hist");
+  };
   /* opts.cta: texto del botón cuando no hay clase agendada (p. ej. "Agendar mi siguiente clase") */
+  /** Botón de Google Meet (enlace del evento que crea meet-sync o, si aún no hay, el enlace fijo del teacher) + aviso de grabación. */
+  const meetBtn = (c) => c && c.status === "scheduled" && /^https:\/\/meet\.google\.com\//.test(c.meet_url || "") ? `<p class="sp-meet"><a class="sp-btn oro" href="${esc(c.meet_url)}" target="_blank" rel="noopener">Entrar a Google Meet</a>${c.recording_requested ? ' <span class="sp-tag rec" title="Todos los participantes dieron su consentimiento">● Se graba y transcribe</span>' : ""}</p>` : "";
+  M.meetBtn = meetBtn;
   const nextCard = (s, classes, agendar, opts = {}) => { const done = doneOf(s), now = new Date();
     const sched = classes.filter((c) => c.status === "scheduled" && new Date(c.starts_at) > now).sort((a, b) => a.starts_at.localeCompare(b.starts_at))[0];
-    return card("Próxima clase", done < 160 ? `<p class="sp-cod">${esc(M.classCodeTopic(done + 1, s.program))}</p>` + (sched ? `<div class="sp-variante ok"><span class="sp-tag ok">Agendada</span><span>${M.fmtDateTime(sched.starts_at)} · Teacher ${esc(sched.teacher_name || s.teacher_name || "")}</span></div>`
+    return card("Próxima clase", done < 160 ? `<p class="sp-cod">${esc(M.classCodeTopic(done + 1, s.program))}</p>` + (sched ? `<div class="sp-variante ok"><span class="sp-tag ok">Agendada</span><span>${M.fmtDateTime(sched.starts_at)} · Teacher ${esc(sched.teacher_name || s.teacher_name || "")}</span></div>${meetBtn(sched)}`
       : `<div class="sp-variante"><span class="sp-tag">Sin agendar</span>${agendar ? `<a class="sp-btn${opts.cta ? " oro" : ""}" href="${agendar}" data-agendar>${esc(opts.cta || "Agendar")}</a>` : ""}</div>`) : `<p class="sp-pend">Todos los cursos completados.</p>`); };
 
+  /** Correo de recuperación: SOLO LECTURA en Datos (lo fija la administración en "Editar"). */
+  const recoveryDd = (s, self) => `<dt style="max-width:8em">Correo de recuperación</dt><dd class="sp-rec" style="overflow-wrap:anywhere;min-width:0">${s.recovery_email ? `<span>${esc(s.recovery_email)}</span>` : '<span class="sp-pend">Sin configurar</span>'}<br><small class="sp-small">${self ? "Lo configura la administración. Si necesitas cambiarlo, escríbele a MEC." : "Se cambia en Editar → Acceso y recuperación."}</small></dd>`;
   function misClases(ctx) {
     const s = ctx.s, done = Math.max(0, (s.start_class_number || 1) - 1 + (s.classes_completed || 0)), now = new Date();
     const you = ctx.self ? "Aún no tienes" : "Aún no tiene";
@@ -100,23 +122,28 @@
     const nota = ctx.note === undefined ? "" : card(`Nota privada del profesor <span class="sp-tag">Solo staff</span>`, ctx.note && ctx.note.notes ? `<p>${esc(ctx.note.notes)}</p>` : `<p class="sp-pend">Aún no hay notas privadas.</p>`, "ancho st-nota");
     return `<div class="sp-grid">${nota}
       ${card("Datos", `<dl class="sp-dl"><dt>Estudiante</dt><dd>${esc(s.full_name || "—")}</dd><dt>En MEC desde</dt><dd>${s.start_date ? M.fmtDate(String(s.start_date).length === 10 ? s.start_date + "T12:00:00Z" : s.start_date) : "—"}</dd><dt>Modalidad</dt><dd>${s.program === "kids" ? "Kids" : "Adultos"}</dd><dt>Teacher</dt><dd>${esc(s.teacher_name || "Por asignar")}</dd>
-        <dt>Nivel actual</dt><dd>${lvl ? `<span class="sp-nivel">${lvl.levelCode}</span> ${lvl.sub ? "Subnivel " + lvl.levelCode + "." + lvl.sub : "Repaso"} · ${esc(lvl.levelName || s.level_name || "")}` : "—"}</dd></dl>`)}
+        ${(ctx.self || ctx.admin) && M.feature("correo_recuperacion") ? recoveryDd(s, ctx.self) : ""}
+        <dt>Nivel actual</dt><dd>${lvl ? `<span class="sp-nivel">${lvl.levelCode}</span> ${lvl.sub ? "Subnivel " + lvl.levelCode + "." + lvl.sub : "Repaso"} · ${esc(lvl.levelName || s.level_name || "")}` : "—"}</dd></dl>${ctx.self && M.feature("clave_obligatoria") ? '<p class="sp-clave"><button type="button" class="sp-btn" data-cambiar-clave>Cambiar contraseña</button></p>' : ""}`)}
       ${card(ctx.self ? "Mi paquete" : "Paquete", paq)}
-      ${historyCard(s, ctx.classes)}
+      ${historyCard(s, ctx.classes, "Historial de clases", { history: ctx.history, used: live.reduce((a, p) => a + (p.classes_used || 0), 0), self: ctx.self })}
       ${currentCard(s)}
       ${nextCard(s, ctx.classes, ctx.agendar)}
       ${card(ctx.self ? "Mis feedbacks" : "Feedbacks", (fbs.length ? `<ul class="sp-fb">${fbs.slice(0, 8).map((c) => `<li${ctx.fbLink ? ` class="sp-fb-click"` : ""}>${ctx.fbLink ? `<a class="sp-fb-a" href="#feedback/${encodeURIComponent(c.id)}" aria-label="Ver el feedback completo de ${esc(c.class_number ? M.classCode(c.class_number) : (c.title || "la clase"))}"></a>` : ""}<div class="sp-fb-h"><strong>${M.kindChip(c)} ${esc(c.class_number ? M.classCodeTopic(c.class_number, s.program) : (c.title || ""))}</strong><time>${M.fmtDate(c.starts_at)}</time></div>${c.teacher_note ? `<p>${esc(c.teacher_note)}</p>` : ""}${c.sentences && c.sentences.length ? `<p class="sp-small">Frases: ${c.sentences.map(esc).join(" · ")}</p>` : ""}</li>`).join("")}</ul>` : `<p class="sp-pend">Aún no hay feedback.</p>`) + (ctx.mes || ""), "ancho")}
       ${card(`${ctx.self ? "Mi BIO" : "BIO"} ${pr.bio_status === "completa" ? '<span class="sp-tag ok">Completa</span>' : '<span class="sp-tag">En construcción</span>'}`, (ctx.self ? `<p class="sp-small">Tu teacher la va completando a medida que te conoce.</p>` : "") +
         (hasBio ? `<div class="sp-bio"><div><h3>Metas</h3>${lista(pr.goals)}</div><div><h3>Gustos</h3>${lista(pr.likes)}</div><div><h3>Personalidad</h3>${lista(pr.personality)}</div></div>` : `<p class="sp-pend">Aún no hay BIO.</p>`), "ancho")}
       ${card(`${ctx.self ? "Mi progreso" : "Progreso"} · Marco Común Europeo`, mcerSvg(mcer(done)) + (cur ? `<p class="sp-small">Calculado con las clases completadas del curso ${cur.levelCode} (${cur.pos} de 32). Cada curso tiene 5 subniveles.</p>` : `<p class="sp-small">Cada curso de nivel tiene 32 clases y 5 subniveles.</p>`))}
-      ${card("Estilo de aprendizaje", (est ? estiloSvg(est) : `<p class="sp-pend">Aún no hay estilo de aprendizaje registrado.</p>`) + (ctx.self ? `<p><button type="button" class="sp-btn" data-pf-test aria-describedby="pf-test-n">Hacer test</button> <span id="pf-test-n" class="sp-small" hidden>Próximamente</span></p>` : ""))}
+      ${card("Estilo de aprendizaje", ctx.self ? (ctx.estiloHtml || '<p class="sp-pend">Aún no hay estilo de aprendizaje registrado.</p>') : (est ? estiloSvg(est) : `<p class="sp-pend">Aún no hay estilo de aprendizaje registrado.</p>`))}
+      ${ctx.testsHtml || ""}
     </div>`;
   }
-  const bindTest = (r) => { const b = r.querySelector("[data-pf-test]"); if (b) b.onclick = () => { r.querySelector("#pf-test-n").hidden = false; }; };
+  const bindTest = () => {};  // el test ahora es una página propia (test-estilo.html); se deja la función por compatibilidad
 
   const avatar = (c) => `<svg viewBox="0 0 100 100" class="sp-av" aria-hidden="true"><circle cx="50" cy="50" r="50" fill="#1b2a3c"/><path d="M14 100c2-20 18-30 36-30s34 10 36 30z" fill="${c}"/><circle cx="50" cy="44" r="21" fill="#4a5d75"/></svg>`;
   const ESTILO = { visual: "Visual", auditivo: "Auditivo", kinestesico: "Kinestésico" };
   /* opts = { myTeacherId, agendar: href } */
+  /** Primer nombre visible: «Diego Gonzalez» → Diego; «Teacher Demo Astrid» → Astrid (se saltan Teacher/Profe/Demo). */
+  const firstName = (n) => { const w = String(n || "").trim().split(/\s+/).filter(Boolean), skip = /^(teacher|teach\.?|profe|profesora?|demo|mr\.?|mrs\.?|ms\.?)$/i;
+    return w.find((x) => !skip.test(x)) || w[0] || "tu teacher"; };
   function teachersView(list, opts = {}) {
     if (!list.length) return `<p class="sp-intro">Conoce a nuestros teachers.</p><div class="sp-card"><p class="sp-pend">Aún no hay perfiles de teachers publicados.</p></div>`;
     return `<p class="sp-intro">Conoce a nuestros teachers.</p><div class="sp-teachers">${list.map((t) => { const c = /^#[0-9a-fA-F]{6}$/.test(t.color) ? t.color : "#2f7fe0", n = esc(t.display_name);
@@ -127,7 +154,7 @@
         <div class="sp-tcols"><div><h3>Experiencia</h3>${lista(t.experience)}</div><div><h3>Fortalezas</h3>${lista(t.strengths)}</div>
         <div class="sp-ancho"><h3>Estilo de enseñanza</h3>${t.teaching_style ? estiloSvg({ Visual: t.teaching_style === "visual" ? 100 : 0, Auditivo: t.teaching_style === "auditivo" ? 100 : 0, "Kinestésico": t.teaching_style === "kinestesico" ? 100 : 0 }, "Estilo de enseñanza preferido") + `<p class="sp-small">Preferido: ${ESTILO[t.teaching_style]}</p>` : '<p class="sp-pend">Por completar</p>'}</div>
         ${opts.omitPersonal ? "" : `<div><h3>Hobbies y gustos</h3>${lista(t.hobbies)}</div><div><h3>Temas de interés</h3>${lista(t.topics)}</div>`}</div>
-        ${opts.agendar ? (mine ? `<p><a class="sp-btn tcolor" href="${opts.agendar}">Agendar con ${n}</a></p>` : `<p class="sp-small">Para tomar clases con ${n}, pide al admin un cambio de teacher.</p>`) : ""}</article>`; }).join("")}</div>`;
+        ${opts.agendar ? `<p><button type="button" class="sp-btn tcolor" data-agendar-t="${esc(t.teacher_id)}" data-agendar-n="${esc(firstName(t.display_name))}">Agenda una clase con ${esc(firstName(t.display_name))} en el Calendario</button></p>` : ""}</article>`; }).join("")}</div>`;
   }
 
   /* Buscador de estudiantes para staff. opts = { students, showTeacher, title, extra(s) → html, bindExtra(root) } */
@@ -158,9 +185,9 @@
     const open = M.wrapErr(async (id) => {
       const s = st.find((x) => x.id === id); if (!s) return;
       const v = $("#pf-perfil"); $("#pf-lista").hidden = true; v.hidden = false; v.innerHTML = '<p class="muted">Cargando…</p>';
-      const [pkgs, classes, prof, note] = await Promise.all([api.listStudentPackages(id), api.listClasses({ studentId: id }), api.getStudentProfile(id), api.getInternalNote(id)]);
-      v.innerHTML = `<p><button type="button" class="sp-btn" id="pf-volver">‹ Volver a la lista</button> <button type="button" class="sp-btn oro" id="pf-editar">Editar</button></p><h2 class="st-nombre" tabindex="-1">${esc(s.full_name || "—")}</h2>` + misClases({ s, pkgs, classes, prof, note: note || null, self: false });
-      v.querySelector(".st-nombre").focus();
+      const [pkgs, classes, prof, note, history, testsHtml] = await Promise.all([api.listStudentPackages(id), api.listClasses({ studentId: id }), api.getStudentProfile(id), api.getInternalNote(id), api.classHistory(id).catch(() => null), M.testsStaff ? M.testsStaff.profileCards(id).catch(() => "") : ""]);
+      v.innerHTML = `<p><button type="button" class="sp-btn" id="pf-volver">‹ Volver a la lista</button> <button type="button" class="sp-btn oro" id="pf-editar">Editar</button></p><h2 class="st-nombre" tabindex="-1">${esc(s.full_name || "—")}</h2>` + misClases({ s, pkgs, classes, history, prof, note: note || null, self: false, admin: !!opts.admin, testsHtml });
+      v.querySelector(".st-nombre").focus(); if (M.testsStaff) M.testsStaff.bindCards(v, () => open(id));
       $("#pf-editar").onclick = () => editStudent(s, prof, classes, () => open(id));
       $("#pf-volver").onclick = () => { v.hidden = true; $("#pf-lista").hidden = false; const b = root.querySelector(`[data-pf="${id}"]`); if (b) b.focus(); };
     });
@@ -185,6 +212,10 @@
         <div><label for="e-k">Kinestésico</label><input id="e-k" type="number" min="0" max="100" value="${pr.style_kinesthetic ?? ""}"></div></div>
         <p class="small" id="e-sum" aria-live="polite"></p><p class="muted small">Déjalos los tres vacíos si aún no lo conoces.</p></fieldset>
       <p><button class="btn" id="e-ok">Guardar BIO y estilo</button> <button class="btn ghost" onclick="MEC.closeModal()">Cerrar</button></p>
+      ${me.role === "admin" && M.feature("correo_recuperacion") ? `<fieldset class="pf-fs" id="e-acc"><legend>Acceso y recuperación · solo admin</legend>
+        <label for="e-rec">Correo de recuperación</label><input id="e-rec" type="email" autocomplete="off" autocapitalize="none" spellcheck="false" value="${esc(s.recovery_email || "")}" aria-describedby="e-rec-h" placeholder="correo real del estudiante">
+        <p class="muted small" id="e-rec-h">Aquí llega el enlace de «Olvidé mi contraseña». El estudiante lo ve en Datos pero no puede cambiarlo. Déjalo vacío para quitarlo.</p>
+        <p><button class="btn" id="e-rec-ok">Guardar correo de recuperación</button></p></fieldset>` : ""}
       <fieldset class="pf-fs"><legend>Feedback por clase</legend>${fbCls.length ? fbCls.slice(0, 20).map((c) => `<div class="cls"><div><b>${esc(c.title || "")}</b><br><span class="muted small">${M.fmtDateTime(c.starts_at)}${c.teacher_note || c.sentences ? " · con feedback" : " · sin feedback"}</span></div>
         <div><button class="btn ghost sm" data-efb="${c.id}">${c.teacher_note || c.sentences ? "Editar" : "Escribir"} feedback</button></div></div>`).join("") : '<p class="muted">Aún no hay clases completadas para dar feedback.</p>'}</fieldset>`, () => {
       const num = (id) => { const v = M.$(id).value.trim(); return v === "" ? null : Math.round(+v); };
@@ -197,6 +228,8 @@
           style_visual: v, style_auditory: a, style_kinesthetic: k });
         M.closeModal(); M.toast("Perfil guardado"); done(); });
       M.$$("[data-efb]").forEach((b) => (b.onclick = () => editFeedback(fbCls.find((c) => c.id === b.dataset.efb), done)));
+      if (M.$("#e-rec-ok")) M.$("#e-rec-ok").onclick = M.wrapErr(async () => { const v = await M.api.setRecoveryEmail(s.id, M.$("#e-rec").value);
+        s.recovery_email = v || null; M.closeModal(); M.toast(v ? "Correo de recuperación guardado" : "Correo de recuperación quitado"); done(); });
     });
   }
   function editFeedback(c, done) {
@@ -237,5 +270,5 @@
   function editTeacher(tid, name, opts) {
     M.modal(`<h2>Perfil público · ${esc(name)}</h2><div id="tp-m"></div>`, () => teacherForm(M.$("#tp-m"), tid, name, Object.assign({ modal: true }, opts)));
   }
-  M.perfil = { porTipo, currentCard, historyCard, nextCard, mcerCard: (done) => card("Mi progreso · Marco Común Europeo", mcerSvg(mcer(done)) + `<p class="sp-small">Avance por curso de nivel (32 clases cada uno).</p>`), misClases, teachersView, studentsBrowser, bindTest, editStudent, teacherForm, editTeacher };
+  M.perfil = { firstName,  porTipo, currentCard, historyCard, nextCard, mcerCard: (done) => card("Mi progreso · Marco Común Europeo", mcerSvg(mcer(done)) + `<p class="sp-small">Avance por curso de nivel (32 clases cada uno).</p>`), misClases, teachersView, studentsBrowser, bindTest, editStudent, teacherForm, editTeacher };
 })();

@@ -5,11 +5,12 @@
   let tab = "agenda", week = M.weekStart(new Date()), teacherFilter = "", reqStatus = "pending", estMode = "perfiles";
   if (location.hash === "#solicitudes") tab = "solicitudes";
   else if (["#noticias", "#moderacion"].includes(location.hash)) tab = location.hash.slice(1);
-  M.header(me, [["agenda", "Agenda"], ["solicitudes", "Solicitud de clases"], ["estudiantes", "Estudiantes"], ["asistencia", "Asistencia"], ["paquetes", "Paquetes"], ["teachers", "Teachers"], ["noticias", "Noticias"], ["moderacion", "Moderación"], ["kids", "Material Kids"], ["cargar", "Cargar datos"]], (t) => { tab = t; render(); });
+  M.header(me, [["agenda", "Agenda"], ["solicitudes", "Solicitud de clases"], ["estudiantes", "Estudiantes"], ["tests", "Tests"], ["asistencia", "Asistencia"], ["paquetes", "Paquetes"], ["teachers", "Teachers"], ["noticias", "Noticias"], ["moderacion", "Moderación"], ["kids", "Material Kids"], ["cargar", "Cargar datos"]], (t) => { tab = t; render(); });
   const render = M.wrapErr(async () => { app.innerHTML = '<p class="muted">Cargando…</p>'; await views[tab](); });
 
   const views = {
     async kids() { await M.kidsMaterialView(app); },
+    async tests() { await M.testsStaff.panel(app, "admin"); },
     async noticias() { await M.noticias.admin(app); },
     async moderacion() { await M.espacio.adminModeration(app); },
     async cargar() { await cargarView(); },
@@ -57,7 +58,7 @@
       const bindSw = () => M.$$("[data-em]").forEach((b) => (b.onclick = () => { estMode = b.dataset.em; render(); }));
       if (estMode === "perfiles") {
         app.innerHTML = `<h1>Estudiantes</h1>${sw}<div id="pf-root"></div>`; bindSw();
-        return M.perfil.studentsBrowser(M.$("#pf-root"), { students: st, showTeacher: true });
+        return M.perfil.studentsBrowser(M.$("#pf-root"), { students: st, showTeacher: true, admin: true });
       }
       const isT = (p) => p.is_test || (st.find((s) => s.id === p.student_id) || {}).is_test, real = st.filter((s) => !s.is_test), pkR = pk.filter((p) => !isT(p) && !p.excluded_from_revenue), nT = st.length - real.length;
       app.innerHTML = `<h1>Estudiantes y paquetes</h1>${sw}

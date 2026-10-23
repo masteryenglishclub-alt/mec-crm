@@ -111,9 +111,33 @@
     const decorate = (c) => {
       const s = stu(c.student_id), fb = db.feedback[c.id] || {};
       return Object.assign({}, c, { title: M.classInfo(c.class_number, s && s.program).title, meet_url: c.meet_url || (teach(c.teacher_id) || {}).meet_url,
+        recording_requested: !!((db.meet || {})[c.id] || {}).recording_requested, meet_synced: !!c.google_event_id,
         teacher_name: prof(c.teacher_id).full_name, student_name: prof(c.student_id).full_name, teacher_note: fb.teacher_note || null, sentences: fb.sentences || null,
         attendance: db.attendance[c.id] || null, late_penalty: c.late_penalty || "none" });
     };
+    /* Google Meet (DEMO): imita a la Edge Function meet-sync con enlaces FALSOS (no se llama a Google ni se invita a nadie). */
+    const SYNTH = "@masteryenglishclub-alt.github.io";
+    const fakeCode = (id) => { let h = 2166136261; for (const ch of String(id)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
+      const L = "abcdefghijkmnopqrstuvwxyz", out = []; for (let i = 0; i < 10; i++) { out.push(L[h % L.length]); h = Math.imul(h, 1103515245) + 12345 >>> 0; }
+      return out.slice(0, 3).join("") + "-" + out.slice(3, 7).join("") + "-" + out.slice(7).join(""); };
+    const consentOk = (pid) => { const r = (db.consents || {})[pid]; const kid = (stu(pid) || {}).program === "kids"; return !!(r && r.consent && (!kid || r.guardian_consent)); };
+    const inviteOf = (pid) => { const p = prof(pid); if (p.email && !p.email.endsWith(SYNTH)) return p.email; return p.recovery_email || null; };
+    const meetLog = (class_id, level, message, detail) => { (db.meet_log = db.meet_log || []).unshift({ id: Date.now() + Math.random(), class_id, level, message, detail: detail || null, created_at: new Date().toISOString() }); db.meet_log.length = Math.min(db.meet_log.length, 200); };
+    function meetSync(c, reason) {
+      if ((db.settings.meet_sync_enabled ?? 1) !== 1) return;
+      db.meet = db.meet || {};
+      if (c.status === "cancelled") { if (c.google_event_id) { c.google_event_id = null; db.meet[c.id] = Object.assign({}, db.meet[c.id], { status: "deleted", links: [], recording_requested: false, synced_at: today() }); meetLog(c.id, "info", "Evento eliminado en Google Calendar (demo)", { reason }); } return; }
+      if (c.status !== "scheduled") return;
+      const studs = c.modality === "group" ? (c.enrolled || [c.student_id]).filter(Boolean) : [c.student_id], people = [c.teacher_id, ...studs];
+      const skipped = people.filter((pid) => !inviteOf(pid)).map((pid) => ({ profile_id: pid, name: prof(pid).full_name, role: pid === c.teacher_id ? "teacher" : "student", reason: "sin correo real (usuario sintético sin correo de recuperación)" }));
+      const rec = (db.settings.meet_recording_enabled ?? 1) === 1 && people.every(consentOk);
+      c.meet_url = (db.meet[c.id] && db.meet[c.id].links && db.meet[c.id].links[0] && db.meet[c.id].links[0].meet_url) || "https://meet.google.com/" + fakeCode(c.id);
+      c.google_event_id = "mec" + String(c.id).replace(/[^0-9a-v]/g, "");
+      db.meet[c.id] = { class_id: c.id, status: "ok", links: [{ part: 1, google_event_id: c.google_event_id, meet_url: c.meet_url }], skipped_invitees: skipped,
+        recording_requested: rec, recording_status: rec ? "requested" : "off", last_error: null, synced_at: today() };
+      if (skipped.length) meetLog(c.id, "warning", "Invitados omitidos (sin correo real; configurar correo de recuperación)", skipped);
+      meetLog(c.id, "info", "Evento sincronizado con Google Calendar/Meet (demo)", { reason });
+    }
     const need = (...roles) => { if (!roles.includes(role())) throw new Error("Permiso denegado"); };
     const canTeachClass = (c) => role() === "admin" || (role() === "teacher" && c.teacher_id === me().id);
     if (!db) { // primera carga: aplicar las completadas en orden (igual que el trigger)
@@ -123,9 +147,18 @@
       done.forEach((c) => complete(c));
       save();
     }
+    if (!db.meet) { db.meet = {}; db.classes.filter((c) => c.status === "scheduled" && c.starts_at > today()).forEach((c) => meetSync(c, "carga inicial")); save(); }
     return {
       mode: "demo",
       async sessionFromUrl() { return null; }, async updatePassword() {}, async resetPassword() { throw new Error("En modo demo no se envían correos."); },
+      /* Olvidé mi contraseña (demo): no envía nada; anota la solicitud y responde SIEMPRE lo mismo. */
+      /* Cambio de contraseña (demo): contraseña simulada por usuario; la temporal de demo es "Temporal2026". */
+      async changePassword(cur, nw) { const u = me(); if (!u) throw new Error("Sin sesión"); M.pwValidate(cur, nw, nw);
+        db.passwords = db.passwords || {}; if (cur !== (db.passwords[u.id] || "Temporal2026")) throw new Error("La contraseña actual no es correcta.");
+        db.passwords[u.id] = nw; prof(u.id).must_change_password = false; save(); },
+      async requestRecovery(login) { (db.recovery_log = db.recovery_log || []).push({ at: today() }); save(); return { ok: true }; },
+      async setRecoveryEmail(uid, email) { need("admin"); const v = M.recoveryEmail(email), p = db.profiles.find((x) => x.id === uid);
+        if (!p) throw new Error("Usuario inexistente"); p.recovery_email = v; save(); return v; },
       /* ---- Material Kids (demo: solo metadatos en localStorage) ---- */
       async listKidsMaterials() { return (db.kids_materials || []).slice().sort((a, b) => b.created_at.localeCompare(a.created_at)); },
       async uploadKidsMaterial(file, title, description) { need("admin", "teacher"); M.checkKidsFile(file);
@@ -142,8 +175,16 @@
         return visibleClasses().filter((c) => (!f.from || c.starts_at >= f.from) && (!f.to || c.starts_at < f.to) && (!f.studentId || c.student_id === f.studentId))
           .map(decorate).sort((a, b) => a.starts_at.localeCompare(b.starts_at));
       },
+      /** Historial: clases dictadas (completadas / no asistió) con asistencia + clases anteriores al sistema (propuesta 20261023_historial_clases) */
+      async classHistory(studentId) {
+        const sys = visibleClasses().filter((c) => ["completed", "no_show"].includes(c.status) && (!studentId || c.student_id === studentId)).map(decorate)
+          .map((c) => ({ source: "sistema", ref: c.id, student_id: c.student_id, starts_at: c.starts_at, class_number: c.class_number, title: c.title, teacher_name: c.teacher_name, session_kind: c.session_kind, status: c.status, attendance: c.attendance, minutes_attended: null }));
+        const prev = (db.class_history_legacy || []).filter((h) => (!studentId || h.student_id === studentId) && visibleStudents().some((s) => s.id === h.student_id))
+          .map((h) => ({ source: "previo", ref: h.id, student_id: h.student_id, starts_at: h.taken_on + "T17:00:00.000Z", class_number: h.class_number, title: h.class_number ? M.classInfo(h.class_number).title : "Clase anterior al sistema", teacher_name: h.teacher_name, session_kind: h.kind, status: "completed", attendance: null, minutes_attended: null }));
+        return sys.concat(prev).sort((a, b) => b.starts_at.localeCompare(a.starts_at));
+      },
       async listStudents() {
-        return visibleStudents().map((s) => Object.assign({}, s, { full_name: prof(s.id).full_name, email: prof(s.id).email, teacher_name: s.teacher_id ? prof(s.teacher_id).full_name : null,
+        return visibleStudents().map((s) => Object.assign({}, s, { full_name: prof(s.id).full_name, email: prof(s.id).email, recovery_email: prof(s.id).recovery_email || null, teacher_name: s.teacher_id ? prof(s.teacher_id).full_name : null,
           ...levelOf(s), remaining: remaining(s.id) }));
       },
       async listTeachers() {
@@ -152,7 +193,7 @@
       },
       async listPackages() { return db.packages.filter((p) => p.active).sort((a, b) => a.sort_order - b.sort_order); },
       /* ---- Perfiles (migración 0900). Demo: sin BIO/estilo guardados -> la interfaz muestra estados vacíos. ---- */
-      async getStudentProfile(sid) { const ok = visibleStudents().some((s) => s.id === sid); if (!ok) throw new Error("Permiso denegado"); return (db.student_profiles || {})[sid] || null; },
+      async getStudentProfile(sid) { const ok = visibleStudents().some((s) => s.id === sid); if (!ok) throw new Error("Permiso denegado"); const p = (db.student_profiles || {})[sid] || null, t = M.tests && M.tests.profileStyle ? M.tests.profileStyle(sid) : null; return t ? Object.assign({}, p || {}, t) : p; },
       async getInternalNote(sid) { need("admin", "teacher"); if (!visibleStudents().some((s) => s.id === sid)) return null; const n = db.notes && db.notes[sid]; return n ? { notes: n } : null; },
       async listTeacherProfiles() { const tp = db.teacher_profiles || {}; // demo: sin perfiles hasta que se editen (sin datos de ejemplo)
         return Object.values(tp).filter((t) => t.published || t.teacher_id === me().id || role() === "admin").map((t) => Object.assign({}, t)); },
@@ -193,7 +234,7 @@
         need("admin", "teacher");
         if (role() === "teacher" && o.class_type !== "extra_reinforcement") throw new Error("Permiso denegado: solo el admin agenda clases de los cursos");
         const start = new Date(o.starts_at), iso = start.toISOString();
-        if (!M.isValidSlot(start)) throw new Error("Fuera del horario de clases (L-V 6:00-18:00, sáb 10:00-16:00, hora Bogotá, en punto)");
+        if (!M.isValidSlot(start)) throw new Error("Fuera del horario de clases: bloques en punto de lunes a sábado (hora Bogotá), dentro de la disponibilidad del teacher");
         const t = teach(o.teacher_id), p = M.bog(start);
         if (!(t.availability || []).some(([d, a, b]) => d === p.dow && p.h >= a && p.h < b)) throw new Error("El teacher no tiene disponibilidad en ese bloque");
         const busy = (c) => c.status !== "cancelled" && Math.abs(new Date(c.starts_at) - start) < 3600e3;
@@ -205,7 +246,7 @@
         if (n && db.classes.some((c) => c.student_id === s.id && c.class_number === n && ["scheduled", "completed"].includes(c.status))) throw new Error(`La clase #${n} ya está agendada`);
         const c = { id: "c-" + Date.now(), student_id: o.student_id, teacher_id: o.teacher_id, starts_at: iso, class_number: n,
           class_type: n ? M.classInfo(n).type : "extra_reinforcement", status: "scheduled", meet_url: o.meet_url || null, modality: "individual", session_kind: "personalizada" };
-        db.classes.push(c); save(); return c;
+        db.classes.push(c); meetSync(c, "creada"); save(); return c;
       },
       async setClassStatus(id, status) {
         const c = db.classes.find((x) => x.id === id); if (!c || !canTeachClass(c)) throw new Error("Permiso denegado");
@@ -300,7 +341,7 @@
         const c = { id: "c-" + Date.now(), student_id: r.student_id, teacher_id: r.teacher_id, starts_at: r.starts_at, class_number: n, class_type: M.classInfo(n).type,
           status: "scheduled", meet_url: null, request_id: r.id, late_penalty: "none", modality: r.modality || "individual" };
         c.session_kind = c.modality === "group" ? (c.class_type === "conversation_lab" ? "club" : "grupal") : "personalizada";
-        db.classes.push(c);
+        db.classes.push(c); meetSync(c, "aprobada");
         Object.assign(r, { status: "approved", class_id: c.id, decided_by: u.id, decided_at: today(), decision_note: note || null });
         db.requests.filter((x) => x.status === "pending" && x.teacher_id === r.teacher_id && x.starts_at === r.starts_at)
           .forEach((x) => Object.assign(x, { status: "rejected", decided_by: u.id, decided_at: today(), decision_note: "Ese bloque se asignó a otra solicitud. Elige otro horario, por favor." }));
@@ -326,8 +367,18 @@
         c.status = "cancelled"; c.cancel_reason = reason || null; c.cancelled_at = today();
         const late = new Date(c.starts_at) - Date.now() < set("late_cancel_hours") * 3600e3;
         if (charge && late) penalize(c); else { c.late_penalty = "none"; }
-        save(); return c.late_penalty;
+        meetSync(c, "cancelada"); save(); return c.late_penalty;
       },
+      /* ---- Google Meet (demo) ---- */
+      async meetSettings() { return { meet_sync_enabled: db.settings.meet_sync_enabled ?? 1, meet_event_minutes: 55, meet_max_participants_per_link: 60, meet_recording_enabled: db.settings.meet_recording_enabled ?? 1, demo: true }; },
+      async listMeetSync() { need("admin"); return Object.values(db.meet || {}); },
+      async listMeetLog() { need("admin"); return (db.meet_log || []).slice(0, 50); },
+      async listRecordingConsents() { if (role() !== "admin") { const r = (db.consents || {})[me().id]; return r ? [Object.assign({ profile_id: me().id }, r)] : []; }
+        return Object.entries(db.consents || {}).map(([profile_id, r]) => Object.assign({ profile_id }, r)); },
+      async setRecordingConsent(pid, consent, guardian, notes) { if (role() !== "admin") throw new Error("Solo la administración registra consentimientos de grabación");
+        db.consents = db.consents || {}; db.consents[pid] = { consent: !!consent, guardian_consent: !!guardian, notes: notes || null, updated_at: today() };
+        db.classes.filter((c) => c.status === "scheduled" && c.starts_at > today() && (c.teacher_id === pid || c.student_id === pid)).forEach((c) => meetSync(c, "consentimiento")); save(); },
+      async meetResync(id) { need("admin"); const c = db.classes.find((x) => x.id === id); if (!c) throw new Error("Clase inexistente"); meetSync(c, "reintento admin"); save(); },
       async listProgress(sid) { const ok = visibleStudents().map((s) => s.id); return db.progress.filter((p) => ok.includes(p.student_id) && (!sid || p.student_id === sid)); },
       async saveProgress(r) {
         need("admin", "teacher"); if (!visibleStudents().some((s) => s.id === r.student_id)) throw new Error("Permiso denegado");
@@ -372,6 +423,9 @@
         if (meCache) return meCache;
         const c = await client(); const { data } = await c.auth.getUser(); if (!data.user) return null;
         meCache = await q(c.from("profiles").select("id, role, full_name, email, program").eq("id", data.user.id).single());
+        // ¿Contraseña temporal pendiente? Lo decide el servidor (si la RPC aún no existe → no se exige).
+        meCache.must_change_password = false;
+        if (M.feature("clave_obligatoria")) { try { const r = await c.rpc("password_change_status"); meCache.must_change_password = !r.error && r.data === true; } catch (e) { meCache.must_change_password = false; } }
         return meCache;
       },
       async signIn(email, password) { const c = await client(); const { error } = await c.auth.signInWithPassword({ email, password }); if (error) throw new Error(error.message); meCache = null; return this.currentUser(); },
@@ -383,8 +437,36 @@
         const { data, error } = await c.auth.getSession(); if (error) throw new Error(error.message);
         meCache = null; return data.session;
       },
+      /* Cambiar contraseña: 1) re-verifica la actual con signInWithPassword, 2) updateUser, 3) el servidor confirma el cambio real
+         (password_change_status compara el hash guardado) y libera el cambio obligatorio. */
+      async changePassword(cur, nw) {
+        M.pwValidate(cur, nw, nw); const c = await client();
+        const { data: ud } = await c.auth.getUser(); const email = ud && ud.user && ud.user.email; if (!email) throw new Error("Tu sesión venció. Vuelve a ingresar.");
+        const si = await c.auth.signInWithPassword({ email, password: cur });
+        if (si.error) throw new Error(/rate|too many/i.test(si.error.message) ? "Demasiados intentos. Espera unos minutos." : "La contraseña actual no es correcta.");
+        const up = await c.auth.updateUser({ password: nw, current_password: cur });   // si se activa «Require current password» en Supabase, el servidor también la verifica
+        if (up.error) { const m = up.error.code || up.error.message || "";
+          throw new Error(/same_password|different/i.test(m) ? "La nueva contraseña debe ser distinta de la actual." : /weak|short|characters/i.test(m) ? "La contraseña no cumple los requisitos de seguridad." : up.error.message); }
+        meCache = null;
+        const st = await c.rpc("password_change_status").catch(() => ({ data: false }));
+        if (st && st.data === true) throw new Error("El servidor aún no registra el cambio. Intenta de nuevo.");
+      },
       async updatePassword(password) { const c = await client(); const { error } = await c.auth.updateUser({ password }); if (error) throw new Error(error.message); meCache = null; },
       async resetPassword(email, redirectTo) { const c = await client(); const { error } = await c.auth.resetPasswordForEmail(email, { redirectTo }); if (error) throw new Error(error.message); },
+      /* Olvidé mi contraseña: Edge Function "recuperar-clave" (respuesta idéntica + límite de intentos en el servidor; envía al correo
+         de recuperación que fijó la administración). Nunca lanza: la pantalla muestra siempre el mismo mensaje.
+         Si la función aún no está desplegada y escribieron un correo real, se usa el envío estándar de Supabase (tampoco revela nada). */
+      async requestRecovery(login, redirectTo) {
+        const c = await client();
+        if (!M.feature("correo_recuperacion")) {   // función apagada: envío estándar de Supabase (como en producción hoy)
+          const v = String(login || "").trim().toLowerCase(); if (v.includes("@") && !v.endsWith("@" + M.LOGIN_DOMAIN)) await c.auth.resetPasswordForEmail(v, { redirectTo }).catch(() => null); return { ok: true }; }
+        try { const { error } = await c.functions.invoke("recuperar-clave", { body: { login: String(login || "").slice(0, 254), redirect_to: redirectTo } }); if (!error) return { ok: true };
+          const v = String(login || "").trim().toLowerCase();
+          if (v.includes("@") && !v.endsWith("@" + M.LOGIN_DOMAIN)) await c.auth.resetPasswordForEmail(v, { redirectTo }).catch(() => null);
+        } catch (e) { console.warn("recuperar-clave", e && e.message); }
+        return { ok: true };
+      },
+      async setRecoveryEmail(uid, email) { if (!M.feature("correo_recuperacion")) throw new Error("Función no habilitada"); const c = await client(); return q(c.rpc("admin_set_recovery_email", { p_user: uid, p_email: M.recoveryEmail(email) })); },
       async listKidsMaterials() { const c = await client(); const rows = await q(c.from("kids_materials").select("*").order("created_at", { ascending: false }));
         return rows.map((r) => Object.assign(r, { url: c.storage.from("kids-material").getPublicUrl(r.file_path).data.publicUrl })); },
       async uploadKidsMaterial(file, title, description) { M.checkKidsFile(file); const c = await client(); const path = M.kidsPath(file);
@@ -400,15 +482,25 @@
         if (f.from) r = r.gte("starts_at", f.from); if (f.to) r = r.lt("starts_at", f.to); if (f.studentId) r = r.eq("student_id", f.studentId);
         return q(r);
       },
+      async classHistory(studentId) { // vista student_class_history (propuesta 20261023); si aún no existe, usa las clases del sistema
+        const c = await client();
+        try { let r = c.from("student_class_history").select("*").order("starts_at", { ascending: false }); if (studentId) r = r.eq("student_id", studentId); return await q(r); }
+        catch (e) {
+          let r = c.from("my_classes").select("*").in("status", ["completed", "no_show"]).order("starts_at", { ascending: false }); if (studentId) r = r.eq("student_id", studentId);
+          const rows = await q(r); const att = rows.length ? await q(c.from("attendance").select("class_id, status, minutes_attended").in("class_id", rows.map((x) => x.id))).catch(() => []) : [];
+          return rows.map((x) => { const a = att.find((y) => y.class_id === x.id) || {}; return { source: "sistema", ref: x.id, student_id: x.student_id, starts_at: x.starts_at, class_number: x.class_number, title: x.title, teacher_name: x.teacher_name, session_kind: x.session_kind, status: x.status, attendance: a.status || null, minutes_attended: a.minutes_attended ?? null }; });
+        }
+      },
       async listStudents() {
         const c = await client();
         const [st, rem, pr] = await Promise.all([q(c.from("students").select("*")), q(c.from("student_remaining_classes").select("*")), q(c.from("student_progress").select("*"))]);
         const ids = [...new Set(st.map((s) => s.teacher_id).filter(Boolean))];
         const tp = ids.length ? await q(c.from("profiles").select("id, full_name").in("id", ids)) : [];
         // is_test (cuentas de prueba) y nombre aunque el estudiante no tenga nivel (student_progress hace join con level_names)
-        const sp = st.length ? await q(c.from("profiles").select("id, full_name, is_test").in("id", st.map((s) => s.id))).catch(() => q(c.from("profiles").select("id, full_name").in("id", st.map((s) => s.id))).catch(() => [])) : [];
+        const recCol = M.feature("correo_recuperacion") ? ", recovery_email" : "";
+        const sp = st.length ? await q(c.from("profiles").select("id, full_name, is_test" + recCol).in("id", st.map((s) => s.id))).catch(() => q(c.from("profiles").select("id, full_name, is_test").in("id", st.map((s) => s.id)))).catch(() => q(c.from("profiles").select("id, full_name").in("id", st.map((s) => s.id))).catch(() => [])) : [];
         return st.map((s) => { const p = pr.find((x) => x.student_id === s.id) || {}, o = sp.find((x) => x.id === s.id) || {};
-          return Object.assign({}, s, { is_test: !!o.is_test, full_name: p.full_name || o.full_name, level_name: p.level_name, teacher_name: (tp.find((t) => t.id === s.teacher_id) || {}).full_name, remaining: rem.find((x) => x.student_id === s.id) || { student_id: s.id, classes_purchased: 0, classes_used: 0, classes_remaining: 0, next_class_number: Math.min(160, (s.start_class_number || 1) + (s.classes_completed || 0)), no_package: true } }); });
+          return Object.assign({}, s, { is_test: !!o.is_test, recovery_email: o.recovery_email || null, full_name: p.full_name || o.full_name, level_name: p.level_name, teacher_name: (tp.find((t) => t.id === s.teacher_id) || {}).full_name, remaining: rem.find((x) => x.student_id === s.id) || { student_id: s.id, classes_purchased: 0, classes_used: 0, classes_remaining: 0, next_class_number: Math.min(160, (s.start_class_number || 1) + (s.classes_completed || 0)), no_package: true } }); });
       },
       async listTeachers() {
         const c = await client(); const ts = await q(c.from("teachers").select("id, meet_url, teacher_availability(weekday,start_hour,end_hour)"));
@@ -541,6 +633,14 @@
           purchase_date: o.purchase_date, expiry_date: o.expiry_date || null, payment_status: o.payment_status }));
       },
       async setTeacherMeet(tid, url) { const c = await client(); await q(c.from("teachers").update({ meet_url: url }).eq("id", tid)); },
+      /* ---- Google Meet (propuesta 20261017_google_meet): solo lectura para el admin; nunca hay credenciales de Google en el navegador ---- */
+      async meetSettings() { if (!M.feature("google_meet")) return {}; const c = await client(); const r = await q(c.from("app_settings").select("key, value_int").like("key", "meet_%")).catch(() => []);
+        return Object.fromEntries(r.map((x) => [x.key, x.value_int])); },
+      async listMeetSync(ids) { if (!M.feature("google_meet")) return []; const c = await client(); let r = c.from("class_meet_sync").select("*"); if (ids && ids.length) r = r.in("class_id", ids); return q(r).catch(() => []); },
+      async listMeetLog() { if (!M.feature("google_meet")) return []; const c = await client(); return q(c.from("meet_sync_log").select("*").order("created_at", { ascending: false }).limit(50)).catch(() => []); },
+      async listRecordingConsents() { if (!M.feature("google_meet")) return []; const c = await client(); return q(c.from("recording_consents").select("*")).catch(() => []); },
+      async setRecordingConsent(pid, consent, guardian, notes) { if (!M.feature("google_meet")) throw new Error("Función no habilitada"); const c = await client(); await q(c.rpc("admin_set_recording_consent", { p_profile: pid, p_consent: !!consent, p_guardian: !!guardian, p_notes: notes || null })); },
+      async meetResync(id) { if (!M.feature("google_meet")) throw new Error("Función no habilitada"); const c = await client(); await q(c.rpc("meet_resync", { p_class: id })); },
       async listBooks() { const c = await client(); return q(c.from("books").select("*").order("level_index")); }
     };
   }

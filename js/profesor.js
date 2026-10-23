@@ -4,6 +4,7 @@
   const M = MEC, app = M.$("#app"), esc = M.esc;
   const me = await M.api.currentUser();
   if (!me) { location.href = "login.html"; return; }
+  await M.passwordGate(me);
   const qs = new URLSearchParams(location.search), id = qs.get("id") || "";
   const back = { admin: "admin.html", teacher: "teacher.html", student: "student.html" }[me.role] || "login.html";
   const el = document.createElement("header"); el.className = "top";

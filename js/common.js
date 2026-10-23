@@ -103,6 +103,14 @@
     if (t.includes("@")) return t;
     if (!/^[a-z0-9][a-z0-9._-]{2,39}$/.test(t)) throw new Error("Usuario no válido: usa solo letras, números, punto, guion o guion bajo");
     return t + "@" + M.LOGIN_DOMAIN; };
+  /** Correo de recuperación (lo fija SOLO la administración): vacío → null; debe ser un buzón real, no el correo de acceso sintético. */
+  /** Funciones con migración pendiente: apagadas salvo que MEC_CRM_CONFIG.FEATURES.<nombre> sea true (la vista previa local las muestra todas). */
+  M.feature = (k) => { const c = window.MEC_CRM_CONFIG || {}; return c.PREVIEW === true || !!(c.FEATURES && c.FEATURES[k]); };
+  M.recoveryEmail = (v) => { const t = String(v || "").trim().toLowerCase(); if (!t) return null;
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(t)) throw new Error("Correo de recuperación no válido");
+    if (t.endsWith("@" + M.LOGIN_DOMAIN)) throw new Error("Usa un correo real (con buzón), no el correo de acceso");
+    return t; };
+  M.RECOVERY_MSG = "Si la cuenta existe y tiene un correo de recuperación, te llegará un enlace.";
   /** Insignia de paquete que no cuenta en ingresos (student_packages.excluded_from_revenue, propuesta 20261017). */
   M.revenueBadge = (p) => p && p.excluded_from_revenue ? ' <span class="tag" title="Paquete excluido de ingresos y reportes (p. ej. cortesía o ya contabilizado)">No cuenta en ingresos</span>' : "";
   /** Información de una clase (número interno 1-160) */
@@ -136,9 +144,12 @@
     return p.dow >= 1 && p.dow <= 6; // sin ventana global: cada teacher define su horario (la base exige que caiga en su disponibilidad)
   };
   const fmt = (o) => new Intl.DateTimeFormat("es-CO", Object.assign({ timeZone: M.TZ }, o));
-  M.fmtDateTime = (d) => fmt({ weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(d)) + " (Bogotá)";
-  M.fmtDate = (d) => fmt({ day: "numeric", month: "short", year: "numeric" }).format(new Date(d));
-  M.fmtTime = (d) => fmt({ hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(d));
+  /** Fecha sola "YYYY-MM-DD" (purchase_date, expiry_date, start_date…): new Date() la toma como medianoche UTC y en Bogotá
+   *  (UTC-5) saldría el día anterior. Se fija a mediodía UTC (07:00 en Bogotá) para que se muestre el mismo día. */
+  M.toDate = (d) => typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d) ? new Date(d + "T12:00:00Z") : new Date(d);
+  M.fmtDateTime = (d) => fmt({ weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false }).format(M.toDate(d)) + " (Bogotá)";
+  M.fmtDate = (d) => fmt({ day: "numeric", month: "short", year: "numeric" }).format(M.toDate(d));
+  M.fmtTime = (d) => fmt({ hour: "2-digit", minute: "2-digit", hour12: false }).format(M.toDate(d));
   M.DOW = ["", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 
   // Material Kids: tipos permitidos y límite (igual que la migración 000700)
@@ -200,17 +211,82 @@
         <span>MASTERY ENGLISH CLUB<small>CRM INTERNO</small></span></a>
       <nav class="tabs">${tabs.map((t, i) => `<button data-tab="${t[0]}" class="${i ? "" : "on"}">${t[1]}</button>`).join("")}</nav>
       <div class="who">${M.api.mode === "demo" ? '<span class="demo-badge">MODO DEMO</span>' : ""}
-        <span>${M.esc(user.full_name)}</span><button class="btn ghost sm" id="logout">Salir</button></div></div>`;
+        <span>${M.esc(user.full_name)}</span>${user.role === "student" || !M.feature("clave_obligatoria") ? "" : '<button class="btn ghost sm" data-cambiar-clave title="Cambiar contraseña">Contraseña</button>'}<button class="btn ghost sm" id="logout">Salir</button></div></div>`;
     document.body.prepend(el);
     el.querySelector("#logout").onclick = async () => { await M.api.signOut(); location.href = "login.html"; };
     M.$$("nav.tabs button", el).forEach((b) => (b.onclick = () => {
       M.$$("nav.tabs button", el).forEach((x) => x.classList.toggle("on", x === b)); onTab(b.dataset.tab);
     }));
   };
-  /** Exige sesión con el rol indicado; si no, vuelve al login */
+  /** Exige sesión con el rol indicado; si no, vuelve al login. Si debe cambiar la contraseña temporal, nada se pinta hasta cambiarla. */
   M.requireRole = async function (role) {
     const u = await M.api.currentUser();
     if (!u || u.role !== role) { location.href = "login.html"; throw new Error("sin sesión"); }
+    await M.passwordGate(u);
     return u;
   };
+
+  /* ---------- Contraseña: reglas, modal de cambio (desde Datos) y bloqueo obligatorio del primer ingreso ---------- */
+  /* Con la función apagada rige la regla anterior (mínimo 8, sin exigir letras y números) */
+  M.PW_MIN = M.feature("clave_obligatoria") ? 10 : 8;
+  M.pwPolicyOk = (a) => String(a || "").length >= M.PW_MIN && (!M.feature("clave_obligatoria") || (/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/.test(a) && /\d/.test(a)));
+  M.pwPolicyMsg = () => M.feature("clave_obligatoria") ? `La contraseña debe tener al menos ${M.PW_MIN} caracteres, con letras y números.` : `La contraseña debe tener al menos ${M.PW_MIN} caracteres.`;
+  M.pwRules = (nw, cur, conf) => [
+    [String(nw || "").length >= M.PW_MIN, `Mínimo ${M.PW_MIN} caracteres`],
+    [/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/.test(nw || ""), "Al menos una letra"],
+    [/\d/.test(nw || ""), "Al menos un número"],
+    [!!nw && nw !== cur, "Distinta de la contraseña actual"],
+    [!!nw && nw === conf, "La confirmación coincide"]];
+  M.pwValidate = (cur, nw, conf) => {
+    if (!cur) throw new Error("Escribe tu contraseña actual.");
+    const bad = M.pwRules(nw, cur, conf).find((r) => !r[0]);
+    if (bad) throw new Error(bad[1] === "La confirmación coincide" ? "La confirmación no coincide." : "La nueva contraseña no cumple: " + bad[1].toLowerCase() + ".");
+  };
+  const pwFormHtml = (forced) => `<div class="pwm">
+    <img class="pwm-logo" src="img/mec-logo-escudo-96.webp" alt="" width="56" height="56">
+    <h2 id="pwm-t">${forced ? "Crea tu contraseña" : "Cambiar contraseña"}</h2>
+    <p class="muted small">${forced ? "Entraste con una contraseña temporal. Antes de continuar, crea una contraseña personal." : "Por seguridad te pedimos primero tu contraseña actual."}</p>
+    <form id="pwm-f" novalidate>
+      <label for="pwm-cur">${forced ? "Contraseña temporal" : "Contraseña actual"}</label><input id="pwm-cur" type="password" autocomplete="current-password" required>
+      <label for="pwm-new">Nueva contraseña</label><input id="pwm-new" type="password" autocomplete="new-password" minlength="${M.PW_MIN}" required aria-describedby="pwm-rules">
+      <label for="pwm-conf">Confirmar nueva contraseña</label><input id="pwm-conf" type="password" autocomplete="new-password" required>
+      <ul class="pwm-rules" id="pwm-rules" aria-live="polite"></ul>
+      <p class="pwm-err" id="pwm-err" role="alert" hidden></p>
+      <div class="pwm-acc"><button class="btn" id="pwm-ok">Guardar contraseña</button>
+        ${forced ? '<button type="button" class="btn ghost" id="pwm-salir">Salir</button>' : '<button type="button" class="btn ghost" id="pwm-cancel">Cancelar</button>'}</div>
+    </form></div>`;
+  const pwOkHtml = (forced) => `<div class="pwm pwm-done" role="status"><img class="pwm-logo" src="img/mec-logo-escudo-96.webp" alt="" width="56" height="56">
+    <h2>Contraseña actualizada</h2><p>Listo. Desde ahora entras con tu nueva contraseña.</p>
+    <div class="pwm-acc"><button type="button" class="btn" id="pwm-fin">${forced ? "Continuar al portal" : "Cerrar"}</button></div></div>`;
+  function bindPwForm(root, forced, onDone) {
+    const $ = (s) => root.querySelector(s), err = $("#pwm-err");
+    const paint = () => { $("#pwm-rules").innerHTML = M.pwRules($("#pwm-new").value, $("#pwm-cur").value, $("#pwm-conf").value)
+      .map(([ok, t]) => `<li class="${ok ? "ok" : ""}"><span aria-hidden="true">${ok ? "✓" : "•"}</span> ${t}${ok ? '<span class="sr-only"> (cumple)</span>' : ""}</li>`).join(""); };
+    ["#pwm-cur", "#pwm-new", "#pwm-conf"].forEach((s) => $(s).addEventListener("input", () => { err.hidden = true; paint(); })); paint();
+    $("#pwm-f").onsubmit = async (e) => { e.preventDefault(); const btn = $("#pwm-ok"); err.hidden = true;
+      try { M.pwValidate($("#pwm-cur").value, $("#pwm-new").value, $("#pwm-conf").value);
+        btn.disabled = true; btn.textContent = "Guardando…";
+        await M.api.changePassword($("#pwm-cur").value, $("#pwm-new").value);
+        root.querySelector(".pwm").outerHTML = pwOkHtml(forced); $("#pwm-fin").focus(); $("#pwm-fin").onclick = onDone;
+      } catch (x) { err.textContent = x.message || String(x); err.hidden = false; btn.disabled = false; btn.textContent = "Guardar contraseña";
+        if (/actual|temporal/i.test(err.textContent)) { $("#pwm-cur").select(); $("#pwm-cur").focus(); } } };
+    if ($("#pwm-salir")) $("#pwm-salir").onclick = async () => { await M.api.signOut(); location.href = "login.html"; };
+    if ($("#pwm-cancel")) $("#pwm-cancel").onclick = () => M.closeModal();
+    setTimeout(() => $("#pwm-cur").focus(), 30);
+  }
+  /** Modal opcional (desde la tarjeta Datos o el botón «Contraseña» de la cabecera) */
+  M.changePasswordModal = () => M.modal(pwFormHtml(false), (m) => bindPwForm(m, false, () => M.closeModal()));
+  /** Bloqueo obligatorio: capa propia que no se cierra (ni clic fuera ni Escape); solo «Guardar» o «Salir». */
+  M.passwordGate = (u) => new Promise((resolve) => {
+    if (!u || !u.must_change_password || !M.feature("clave_obligatoria")) return resolve();
+    const g = document.createElement("div"); g.id = "pwgate"; g.className = "modal on pwgate";
+    g.setAttribute("role", "dialog"); g.setAttribute("aria-modal", "true"); g.setAttribute("aria-labelledby", "pwm-t");
+    g.innerHTML = `<div class="panel">${pwFormHtml(true)}</div>`; document.body.appendChild(g);
+    g.addEventListener("keydown", (e) => { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); }
+      if (e.key === "Tab") { const f = [...g.querySelectorAll("input,button:not([disabled])")]; const i = f.indexOf(document.activeElement);
+        if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1].focus(); } else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); } } });
+    bindPwForm(g, true, () => { g.remove(); u.must_change_password = false; resolve(); });
+  });
+  if (typeof document !== "undefined" && document.addEventListener) document.addEventListener("click", (e) => {
+    const b = e.target && e.target.closest && e.target.closest("[data-cambiar-clave]"); if (b) { e.preventDefault(); M.changePasswordModal(); } });
 })();

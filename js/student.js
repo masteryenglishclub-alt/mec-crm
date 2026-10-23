@@ -12,6 +12,7 @@
     if (t === "feedback" && tab === "feedback" && fbSelect) { const id = decodeURIComponent(location.hash.split("/")[1] || ""); if (id) return fbSelect(id); }
     if (t !== tab) goTab(t); });
   M.header(me, TABS, (t) => { tab = t; if (location.hash) history.replaceState(null, "", location.pathname + location.search); render(); });
+  if (M.espacio && M.espacio.watch) M.espacio.watch();
   M.$$("[data-tab]").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab));
   const render = M.wrapErr(async () => { fbSelect = null; app.innerHTML = '<p class="muted">Cargando…</p>'; await views[tab](); });
   const S = M.stSafe, data = async () => { const [s] = await api.listStudents(); return S.student(s); };
@@ -35,13 +36,13 @@
 
   const views = {
     async inicio() { // Inicio = vista completa de "Mis clases" (fondo del salón vikingo) + saludo, estado de pago, pases libres y "Tu mes"
-      const [s, cls, b, pkgs] = await Promise.all([data(), api.listClasses(), bstat(), api.listStudentPackages().catch(() => [])]);
-      const prof = await api.getStudentProfile(s.id).catch(() => null), pr = ((await api.listProgress().catch(() => [])) || [])[0], now = new Date().toISOString();
+      const [s, cls, b, pkgs, hist] = await Promise.all([data(), api.listClasses(), bstat(), api.listStudentPackages().catch(() => []), (api.classHistory ? api.classHistory().catch(() => null) : null)]);
+      const prof = await api.getStudentProfile(s.id).catch(() => null), estiloHtml = M.testsCards ? await M.testsCards.estiloSelf(prof).catch(() => "") : "", testsHtml = M.testsCards ? await M.testsCards.self().catch(() => "") : "", pr = ((await api.listProgress().catch(() => [])) || [])[0], now = new Date().toISOString();
       const up = cls.filter((c) => c.status === "scheduled" && c.starts_at >= now);
       const mes = `<div class="sp-mes"><h3>Tu mes</h3>${pr ? `<div class="grid g3"><div class="kpi"><b>${pr.speaking_minutes}</b><span>min hablando</span></div><div class="kpi"><b>${pr.speaking_pct ?? "—"}%</b><span>del tiempo</span></div><div class="kpi"><b>${pr.fluency ?? "—"}/5</b><span>fluidez</span></div></div>
           ${(pr.new_vocabulary || []).length ? `<p class="sp-small">Vocabulario nuevo:</p><div class="chips">${pr.new_vocabulary.map((w) => `<span class="chip">${M.esc(w)}</span>`).join("")}</div>` : ""}` : '<p class="sp-pend">Tu teacher registrará tu progreso de este mes.</p>'}</div>`;
       app.innerHTML = `<div class="smc"><div class="stt-in"><h1>Hola, ${M.esc((s.full_name || "").split(" ")[0])}</h1>${M.paymentBanner(b)}
-        ${M.perfil.misClases({ s, pkgs: pkgs || [], classes: cls, prof, self: true, agendar: "#solicitar", passes: M.passes(b), mes, fbLink: true })}
+        ${M.perfil.misClases({ s, pkgs: pkgs || [], classes: cls, history: hist, prof, self: true, estiloHtml, testsHtml, agendar: "#solicitar", passes: M.passes(b), mes, fbLink: true })}
         <div class="panel rune pf-sec"><h3>Próximas clases agendadas</h3>${up.map(clsRow).join("") || '<p class="muted">Sin clases agendadas.</p>'}
         <p><a class="btn sm" href="#solicitar" id="goreq">${b.payment_blocked ? "Ver estado de mi paquete" : "Solicitar una clase"}</a></p>
         <p class="small muted">Horario en hora de Bogotá. El enlace de Google Meet se activa a la hora de tu clase. Cancelación sin cargo hasta ${b.late_cancel_hours} h antes · pases libres: ${b.passes_remaining} de ${b.passes_total}.</p></div></div></div>`;
