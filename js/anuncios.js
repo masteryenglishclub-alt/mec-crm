@@ -29,9 +29,10 @@
   }
   function html(p, top) {
     const a = p.ad, ext = /^https:/.test(a.link);
-    const img = a.image && okImg(a.image) ? `<img src="${esc(a.image)}" alt="${esc(a.imageAlt || "")}" loading="lazy" decoding="async">` : "";
-    const legal = okLink(a.legalUrl) ? `<a href="${esc(a.legalUrl)}" target="_blank" rel="noopener">${esc(a.legalLabel || "Términos y condiciones")}</a>` : esc(a.legalLabel || "");
-    return `<aside class="ad-card${img ? "" : " sin-img"}${p.sample ? " ad-muestra" : ""}" aria-label="Anuncio${p.sample ? " de muestra" : ""}" data-ad-id="${esc(a.id)}">
+    const mob = a.imageMobile && okImg(a.imageMobile) ? `<source media="(max-width:640px)" srcset="${esc(a.imageMobile)}">` : "";
+    const img = a.image && okImg(a.image) ? `<picture>${mob}<img src="${esc(a.image)}" alt="${esc(a.imageAlt || "")}" loading="lazy" decoding="async"></picture>` : "";
+    const legal = a.legalUrl && okLink(a.legalUrl) ? `<a href="${esc(a.legalUrl)}" target="_blank" rel="noopener">${esc(a.legalLabel || "Términos y condiciones")}</a>` : esc(a.legalLabel || "");
+    return `<aside class="ad-card${img ? "" : " sin-img"}${a.wide ? " ad-ancha" : ""}${p.sample ? " ad-muestra" : ""}" aria-label="Anuncio${p.sample ? " de muestra" : ""}" data-ad-id="${esc(a.id)}">
       ${p.sample ? '<span class="ad-marca">Muestra · no publicar</span>' : ""}${img}
       <div><span class="ad-kicker">${esc(a.kicker || "Anuncio")}</span><h3>${esc(a.title)}</h3><p>${esc(a.text)}</p>
       <a class="${top ? "btn sm" : "sp-btn oro btn"}" href="${esc(a.link)}"${ext ? ' target="_blank" rel="noopener"' : ""}>${esc(a.linkLabel || "Más información")}</a>
