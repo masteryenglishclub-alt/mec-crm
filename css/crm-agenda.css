@@ -133,3 +133,8 @@ body.crm-n{overflow-x:hidden}
 .agv-celda.agv-conb.off .agv-bands i{opacity:.35}
 .agv-ley-t{margin-top:-4px}.agv-ley-t i{border-color:#0b1522}
 @media (max-width:700px){.agv-bands i{width:4px}}
+/* 24-oct-2026 · columna de horas fija al deslizar la semana (sobre todo en el celular).
+   overflow:clip recorta las esquinas redondeadas sin crear un contenedor de scroll, así el sticky funciona contra .agv-scroll */
+.agv-grid{overflow:clip}
+.agv-hora,.agv-hcol{position:sticky;left:0;z-index:3;background:#0b1828;box-shadow:1px 0 0 #233650}
+.agv-hcol{z-index:4}
