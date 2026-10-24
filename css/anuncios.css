@@ -18,3 +18,8 @@
 .ad-slot.ad-top .ad-card{border-radius:0;outline:0;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px 18px;text-align:center;padding:10px 20px;box-shadow:none;border-width:0 0 1px 0}
 .ad-slot.ad-top .ad-card img{display:none}
 .ad-slot.ad-top .ad-card h3{font-size:1rem;margin:0}.ad-slot.ad-top .ad-card p{margin:0}.ad-slot.ad-top .ad-kicker{display:none}
+/* 24-oct-2026 · anuncio ancho: banner completo arriba (sin recortar) y versión vertical en el celular */
+.ad-card picture{display:block}
+.ad-card.ad-ancha{grid-template-columns:1fr}
+.ad-card.ad-ancha img{max-height:none;object-fit:contain}
+@media (max-width:640px){.ad-card.ad-ancha img{max-width:460px;margin:0 auto}}
