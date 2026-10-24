@@ -123,6 +123,8 @@
     async teachers() {
       const [s, list] = await Promise.all([data(), api.listTeacherProfiles()]);
       app.innerHTML = `<div class="stt"><div class="stt-in"><h1>Teachers</h1>${M.perfil.teachersView(list, { myTeacherId: s.teacher_id, agendar: "#solicitar" })}</div></div>`;
+      // «Agenda una clase con X»: abre el Calendario filtrado por ese teacher
+      M.$$("[data-agendar-t]", app).forEach((el) => (el.onclick = () => { calFilter = el.dataset.agendarT || ""; history.replaceState(null, "", "#solicitar"); goTab("solicitar"); }));
     },
     async feedback() { // Visor grande arriba + lista; #feedback/<id> abre uno concreto (desde las tarjetas de Inicio)
       const [s, cls] = await Promise.all([data(), api.listClasses()]), esc = M.esc;

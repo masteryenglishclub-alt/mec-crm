@@ -44,7 +44,8 @@
       <circle cx="42" cy="46" r="2.4" fill="#1d1d1d"/><circle cx="58" cy="46" r="2.4" fill="#1d1d1d"/><path d="M43 54q7 6 14 0" stroke="#7a3b2e" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>`;
   }
   const casos = $("#casos");
-  if (casos) casos.innerHTML = D.testimonios.map((t) => `<!-- PLACEHOLDER: testimonio de EJEMPLO inventado; reemplazar por uno real -->
+  if (casos && !(D.testimonios || []).length) { const sec = casos.closest("#casos-exito"); if (sec) sec.hidden = true; } // sin testimonios reales: se oculta la sección
+  else if (casos) casos.innerHTML = D.testimonios.map((t) => `<!-- PLACEHOLDER: testimonio de EJEMPLO inventado; reemplazar por uno real -->
     <figure class="card testimonio" data-placeholder="${t.placeholder}">${avatar(t.avatar)}
       <blockquote>“${esc(t.texto)}”</blockquote><figcaption><strong>${esc(t.nombre)}</strong> · ${esc(t.pais)} · Nivel ${esc(t.nivel)}</figcaption>
       <span class="ejemplo">Testimonio de ejemplo</span></figure>`).join("");
