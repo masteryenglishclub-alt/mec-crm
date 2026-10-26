@@ -1,11 +1,12 @@
 /* MEC CRM – «Mi disponibilidad» (teacher) y «Disponibilidad» (admin). Decisión del dueño (26-oct-2026):
    la disponibilidad se marca SEMANA POR SEMANA; si una semana no tiene bloques marcados, esa semana no se le pueden agendar clases.
    Bloques de 60 min en punto, lunes a sábado (hora Bogotá). Se guarda la semana completa con api.setWeekSlots (RPC set_week_slots).
+   Horario: las 24 horas (00:00–24:00), lunes a sábado.
    Pantalla: por defecto BLOQUEADA (solo ver, se desliza normal). «Agenda tu disponibilidad» abre la edición:
    en el celular se elige el día y las horas salen en lista (sin deslizar hacia los lados); en el computador, cuadrícula con clic o arrastre. */
 (function () {
   const M = window.MEC, esc = M.esc;
-  const H0 = 5, H1 = 23;                       // 5:00 a 23:00
+  const H0 = 0, H1 = 23;                       // 24 horas: 00:00 a 23:00 (pedido del dueño, 26-oct-2026)
   const hh = (h) => String(h).padStart(2, "0") + ":00";
   const narrow = () => matchMedia("(max-width: 700px)").matches;
 
