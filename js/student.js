@@ -51,7 +51,7 @@
     },
     async solicitar() { // "Calendario": la misma agenda semanal del admin (js/agenda-view.js). Otros estudiantes = "Ocupado" (sin identidad; la RPC no la envía).
       const to = new Date(week.getTime() + 7 * 864e5);
-      const [s, b, reqs, mine, teachers, busy, tps, tc] = await Promise.all([data(), bstat(), api.listRequests(), api.listClasses(), api.calendarTeachers(),
+      const [s, b, reqs, mine, teachers, busy, tps, tc] = await Promise.all([data(), bstat(), api.listRequests(), api.listClasses(), api.calendarTeachers(week),
         api.calendarBusy(week.toISOString(), to.toISOString()), api.listTeacherProfiles().catch(() => []), api.creditsByType().catch(() => null)]);
       const colors = M.teacherColors(teachers, tps), esc = M.esc, hh = M.agenda.hh, tname = (id) => (teachers.find((t) => t.id === id) || {}).full_name || "";
       const minT = Date.now() + b.min_request_hours * 3600e3, locked = b.payment_blocked || b.available_to_request < 1;

@@ -151,6 +151,8 @@
   M.fmtDate = (d) => fmt({ day: "numeric", month: "short", year: "numeric" }).format(M.toDate(d));
   M.fmtTime = (d) => fmt({ hour: "2-digit", minute: "2-digit", hour12: false }).format(M.toDate(d));
   M.DOW = ["", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+  /** Disponibilidad por semana (tabla teacher_slots): bloques de UNA semana → formato [díaSemana, horaInicio, horaFin] que usan los calendarios. */
+  M.slotsToAvail = (rows, tid) => (rows || []).filter((r) => !tid || r.teacher_id === tid).map((r) => { const p = M.bog(r.starts_at); return [p.dow, p.h, p.h + 1]; });
 
   // Material Kids: tipos permitidos y límite (igual que la migración 000700)
   M.KIDS_TYPES = { pdf: "application/pdf", png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp",
