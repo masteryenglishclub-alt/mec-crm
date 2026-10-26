@@ -4,19 +4,20 @@
   const me = await M.requireRole("admin");
   let tab = "agenda", week = M.weekStart(new Date()), teacherFilter = "", reqStatus = "pending", estMode = "perfiles";
   if (location.hash === "#solicitudes") tab = "solicitudes";
-  else if (["#noticias", "#moderacion"].includes(location.hash)) tab = location.hash.slice(1);
-  M.header(me, [["agenda", "Agenda"], ["solicitudes", "Solicitud de clases"], ["estudiantes", "Estudiantes"], ["tests", "Tests"], ["asistencia", "Asistencia"], ["paquetes", "Paquetes"], ["teachers", "Teachers"], ["noticias", "Noticias"], ["moderacion", "Moderación"], ["kids", "Material Kids"], ["cargar", "Cargar datos"]], (t) => { tab = t; render(); });
+  else if (["#noticias", "#moderacion", "#disponibilidad"].includes(location.hash)) tab = location.hash.slice(1);
+  M.header(me, [["agenda", "Agenda"], ["disponibilidad", "Disponibilidad"], ["solicitudes", "Solicitud de clases"], ["estudiantes", "Estudiantes"], ["tests", "Tests"], ["asistencia", "Asistencia"], ["paquetes", "Paquetes"], ["teachers", "Teachers"], ["noticias", "Noticias"], ["moderacion", "Moderación"], ["kids", "Material Kids"], ["cargar", "Cargar datos"]], (t) => { tab = t; render(); });
   const render = M.wrapErr(async () => { app.innerHTML = '<p class="muted">Cargando…</p>'; await views[tab](); });
 
   const views = {
     async kids() { await M.kidsMaterialView(app); },
     async tests() { await M.testsStaff.panel(app, "admin"); },
+    async disponibilidad() { await M.disponibilidad.view(app, { admin: true, teacherId: me.id }); },
     async noticias() { await M.noticias.admin(app); },
     async moderacion() { await M.espacio.adminModeration(app); },
     async cargar() { await cargarView(); },
     async agenda() {
       const to = new Date(week.getTime() + 7 * 864e5);
-      const [cls, teachers, students, tps] = await Promise.all([api.listClasses({ from: week.toISOString(), to: to.toISOString() }), api.listTeachers(), api.listStudents(), api.listTeacherProfiles().catch(() => [])]);
+      const [cls, teachers, students, tps] = await Promise.all([api.listClasses({ from: week.toISOString(), to: to.toISOString() }), api.listTeachers(week), api.listStudents(), api.listTeacherProfiles().catch(() => [])]);
       const colors = M.teacherColors(teachers, tps), esc = M.esc;
       const shown = cls.filter((c) => !teacherFilter || c.teacher_id === teacherFilter);
       const today = M.bog(new Date());
@@ -127,7 +128,7 @@
         <p>Perfil público: ${!pf ? '<span class="tag">Sin perfil</span>' : pf.published ? '<span class="tag r-approved">Publicado</span>' : '<span class="tag r-pending">Sin publicar</span>'}
         <button class="btn sm" data-tpedit="${x.id}">${pf ? "Editar perfil" : "Crear perfil"}</button></p>
         <label>Enlace fijo de Google Meet</label><div class="row"><input value="${M.esc(x.meet_url || "")}" data-meet="${x.id}" placeholder="https://meet.google.com/xxx-xxxx-xxx"><button class="btn" style="flex:0 0 auto" data-save="${x.id}">Guardar</button></div>
-        <p class="muted small" style="margin-top:8px">Disponibilidad: ${(x.availability || []).map(([d, a, b]) => `${M.DOW[d]} ${a}:00–${b}:00`).join(" · ") || "sin registrar (no se le pueden agendar clases hasta cargarla)"}</p></div>`; }).join("");
+        <p class="muted small" style="margin-top:8px">Disponibilidad: se marca semana a semana en la pestaña «Disponibilidad» (sin bloques marcados esa semana no se le pueden agendar clases).</p></div>`; }).join("");
       M.$$("[data-tpedit]").forEach((b) => (b.onclick = M.wrapErr(async () => { const x = t.find((y) => y.id === b.dataset.tpedit);
         M.perfil.editTeacher(x.id, x.full_name, { admin: true, onSaved: render }); })));
       M.$$("[data-save]").forEach((b) => (b.onclick = M.wrapErr(async () => {

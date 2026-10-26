@@ -187,9 +187,23 @@
         return visibleStudents().map((s) => Object.assign({}, s, { full_name: prof(s.id).full_name, email: prof(s.id).email, recovery_email: prof(s.id).recovery_email || null, teacher_name: s.teacher_id ? prof(s.teacher_id).full_name : null,
           ...levelOf(s), remaining: remaining(s.id) }));
       },
-      async listTeachers() {
+      async weekSlots(from, to, tid) { // demo: si el teacher aún no marcó nada, se toma su horario fijo de muestra
+        const out = [], f = new Date(from).getTime(), t = new Date(to).getTime(); db.week_slots = db.week_slots || [];
+        db.teachers.filter((x) => !tid || x.id === tid).forEach((x) => {
+          const mine = db.week_slots.filter((w) => w.teacher_id === x.id && new Date(w.starts_at).getTime() >= f && new Date(w.starts_at).getTime() < t);
+          if (mine.length || db.week_slots.some((w) => w.teacher_id === x.id && w.week === new Date(from).toISOString())) return mine.forEach((w) => out.push({ teacher_id: w.teacher_id, starts_at: w.starts_at }));
+          for (let d = 0; d < 6; d++) for (let h = 0; h < 24; h++) { const day = M.bog(f + d * 864e5), ts = M.bogDate(day.y, day.m, day.d, h);
+            if ((x.availability || []).some(([dw, a, z]) => dw === day.dow && h >= a && h < z)) out.push({ teacher_id: x.id, starts_at: ts.toISOString() }); } });
+        return out; },
+      async setWeekSlots(tid, weekStart, slots) { if (!(role() === "admin" || tid === me().id)) throw new Error("Solo puedes editar tu propia disponibilidad");
+        const f = new Date(weekStart).getTime(), t = f + 7 * 864e5; db.week_slots = (db.week_slots || []).filter((w) => !(w.teacher_id === tid && (w.week === new Date(weekStart).toISOString() || (new Date(w.starts_at).getTime() >= f && new Date(w.starts_at).getTime() < t))));
+        db.week_slots.push({ teacher_id: tid, week: new Date(weekStart).toISOString(), starts_at: null }); slots.forEach((x) => db.week_slots.push({ teacher_id: tid, starts_at: new Date(x).toISOString() }));
+        db.week_slots = db.week_slots.filter((w) => w.starts_at || w.week); save(); return slots.length; },
+      async listTeachers(week) {
         if (role() === "student") { const s = stu(me().id); const t = teach(s.teacher_id); return t ? [{ id: t.id, full_name: prof(t.id).full_name, meet_url: t.meet_url }] : []; }
-        return db.teachers.filter((t) => role() === "admin" || t.id === me().id).map((t) => Object.assign({}, t, { full_name: prof(t.id).full_name }));
+        const ts = db.teachers.filter((t) => role() === "admin" || t.id === me().id).map((t) => Object.assign({}, t, { full_name: prof(t.id).full_name }));
+        if (week) { const sl = await this.weekSlots(week, new Date(new Date(week).getTime() + 7 * 864e5)); ts.forEach((t) => (t.availability = M.slotsToAvail(sl.filter((x) => x.starts_at), t.id))); }
+        return ts;
       },
       async listPackages() { return db.packages.filter((p) => p.active).sort((a, b) => a.sort_order - b.sort_order); },
       /* ---- Perfiles (migración 0900). Demo: sin BIO/estilo guardados -> la interfaz muestra estados vacíos. ---- */
@@ -287,7 +301,8 @@
       async settings() { return Object.assign({}, db.settings); },
       async setSetting(k, v) { need("admin"); db.settings[k] = +v; save(); },
       /* Calendario del estudiante (PROPUESTA 20261016_calendario_estudiante): todos los teachers activos, ocupados SIN identidad. */
-      async calendarTeachers() { return db.teachers.filter((t) => t.active !== false).map((t) => ({ id: t.id, full_name: prof(t.id).full_name, availability: t.availability })); },
+      async calendarTeachers(week) { const sl = week ? (await this.weekSlots(week, new Date(new Date(week).getTime() + 7 * 864e5))).filter((x) => x.starts_at) : null;
+        return db.teachers.filter((t) => t.active !== false).map((t) => ({ id: t.id, full_name: prof(t.id).full_name, availability: sl ? M.slotsToAvail(sl, t.id) : t.availability })); },
       async calendarBusy(from, to) { const u = me();
         return db.classes.filter((c) => c.status !== "cancelled" && c.starts_at >= from && c.starts_at < to && teach(c.teacher_id))
           .map((c) => ({ teacher_id: c.teacher_id, starts_at: c.starts_at, modality: c.modality || "individual", mine: c.student_id === u.id })); },
@@ -502,11 +517,16 @@
         return st.map((s) => { const p = pr.find((x) => x.student_id === s.id) || {}, o = sp.find((x) => x.id === s.id) || {};
           return Object.assign({}, s, { is_test: !!o.is_test, recovery_email: o.recovery_email || null, full_name: p.full_name || o.full_name, level_name: p.level_name, teacher_name: (tp.find((t) => t.id === s.teacher_id) || {}).full_name, remaining: rem.find((x) => x.student_id === s.id) || { student_id: s.id, classes_purchased: 0, classes_used: 0, classes_remaining: 0, next_class_number: Math.min(160, (s.start_class_number || 1) + (s.classes_completed || 0)), no_package: true } }); });
       },
-      async listTeachers() {
-        const c = await client(); const ts = await q(c.from("teachers").select("id, meet_url, teacher_availability(weekday,start_hour,end_hour)"));
+      async listTeachers(week) {
+        const c = await client(); const ts = await q(c.from("teachers").select("id, meet_url"));
         const ps = ts.length ? await q(c.from("profiles").select("id, full_name").in("id", ts.map((t) => t.id))) : [];
-        return ts.map((t) => Object.assign(t, { full_name: (ps.find((p) => p.id === t.id) || {}).full_name, availability: (t.teacher_availability || []).map((a) => [a.weekday, a.start_hour, a.end_hour]) }));
+        const sl = week ? await this.weekSlots(week, new Date(new Date(week).getTime() + 7 * 864e5)).catch(() => []) : [];
+        return ts.map((t) => Object.assign(t, { full_name: (ps.find((p) => p.id === t.id) || {}).full_name, availability: M.slotsToAvail(sl, t.id) }));
       },
+      /* Disponibilidad por semana (26-oct-2026): tabla teacher_slots; se guarda la semana completa con set_week_slots. */
+      async weekSlots(from, to, tid) { const c = await client(); let r = c.from("teacher_slots").select("teacher_id, starts_at").gte("starts_at", new Date(from).toISOString()).lt("starts_at", new Date(to).toISOString());
+        if (tid) r = r.eq("teacher_id", tid); return (await q(r)).map((x) => ({ teacher_id: x.teacher_id, starts_at: new Date(x.starts_at).toISOString() })); },
+      async setWeekSlots(tid, weekStart, slots) { const c = await client(); return q(c.rpc("set_week_slots", { p_teacher: tid, p_week_start: new Date(weekStart).toISOString(), p_slots: slots })); },
       async listPackages() { const c = await client(); return q(c.from("packages").select("*").eq("active", true).order("sort_order")); },
       /* v3 perfil: tablas PROPUESTAS en supabase/proposed/ (no aplicadas). Mientras no existan, la consulta falla y la vista muestra estado vacío. */
       async listTeacherReviews(tid) { const u = await this.currentUser(); if (!u || !(u.role === "admin" || (u.role === "teacher" && u.id === tid))) return []; const c = await client(); return q(c.from("teacher_reviews").select("rating, comment, author_name, created_at").eq("teacher_id", tid).eq("published", true).order("created_at", { ascending: false }).limit(500)); },
@@ -589,9 +609,9 @@
       async setSetting(k, v) { const c = await client(); await q(c.from("app_settings").update({ value_int: +v }).eq("key", k)); },
       async teacherCalendar(tid, from, to) {
         const c = await client();
-        const [av, busy] = await Promise.all([q(c.from("teacher_availability").select("weekday,start_hour,end_hour").eq("teacher_id", tid)),
+        const [sl, busy] = await Promise.all([this.weekSlots(from, to, tid).catch(() => []),
           q(c.rpc("teacher_busy_slots", { p_teacher: tid, p_from: from, p_to: to }))]);
-        return { availability: av.map((a) => [a.weekday, a.start_hour, a.end_hour]), busy: busy.map((b) => new Date(b.starts_at).toISOString()) };
+        return { availability: M.slotsToAvail(sl, tid), busy: busy.map((b) => new Date(b.starts_at).toISOString()) };
       },
       async listRequests(f = {}) {
         const c = await client(); let r = c.from("class_requests").select("*").order("starts_at"); if (f.status) r = r.eq("status", f.status);
@@ -607,11 +627,11 @@
         if (o.modality === "group") row.modality = "group";        // columna nueva de la misma PROPUESTA
         return q(c.from("class_requests").insert(row).select().single()); },
       /* Calendario del estudiante. Con la PROPUESTA aplicada: todos los teachers (RPC sin identidad). Sin ella: solo su teacher (teacher_busy_slots). */
-      async calendarTeachers() { const c = await client();
-        const [tp, mine, av] = await Promise.all([q(c.from("teacher_public_profiles").select("teacher_id, display_name, color").eq("published", true)).catch(() => []),
-          this.listTeachers().catch(() => []), q(c.from("teacher_availability").select("teacher_id, weekday, start_hour, end_hour")).catch(() => [])]);
+      async calendarTeachers(week) { const c = await client(), w = week || M.weekStart(new Date());
+        const [tp, mine, sl] = await Promise.all([q(c.from("teacher_public_profiles").select("teacher_id, display_name, color").eq("published", true)).catch(() => []),
+          this.listTeachers().catch(() => []), this.weekSlots(w, new Date(new Date(w).getTime() + 7 * 864e5)).catch(() => [])]);
         const m = new Map(); tp.forEach((t) => m.set(t.teacher_id, { id: t.teacher_id, full_name: t.display_name })); mine.forEach((t) => m.has(t.id) || m.set(t.id, { id: t.id, full_name: t.full_name }));
-        return [...m.values()].map((t) => Object.assign(t, { availability: av.filter((a) => a.teacher_id === t.id).map((a) => [a.weekday, a.start_hour, a.end_hour]) })); },
+        return [...m.values()].map((t) => Object.assign(t, { availability: M.slotsToAvail(sl, t.id) })); },
       async calendarBusy(from, to) { const c = await client();
         try { return (await q(c.rpc("calendar_busy_slots", { p_from: from, p_to: to }))).map((b) => ({ teacher_id: b.teacher_id, starts_at: new Date(b.starts_at).toISOString(), modality: b.modality, mine: b.mine })); }
         catch (e) { const t = (await this.listTeachers())[0]; if (!t) return [];
