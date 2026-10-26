@@ -1,9 +1,10 @@
-/* MEC · service worker de la app instalable (26-oct-2026).
+/* MEC · service worker (páginas: siempre se revalidan con el servidor, para no quedar con una versión vieja hasta 10 min)
+    de la app instalable (26-oct-2026).
    - Solo maneja peticiones GET del MISMO sitio. Supabase (datos, audios, inicio de sesión) nunca pasa por aquí ni se guarda.
    - Páginas: primero la red (siempre lo más nuevo); sin conexión, la última copia o un aviso.
    - css/js/img/fuentes: copia rápida y se actualiza por detrás (los ?v= de cada archivo evitan versiones viejas).
    Para forzar a todos a limpiar la caché: cambiar VERSION. */
-const VERSION = "mec-20261026a";
+const VERSION = "mec-20261026b";
 const STATIC = /\.(css|js|webp|png|jpe?g|svg|ico|ttf|woff2?|webmanifest)$/i;
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (e) => e.waitUntil((async () => {
@@ -19,7 +20,7 @@ self.addEventListener("fetch", (e) => {
   if (r.method !== "GET" || u.origin !== self.location.origin) return;
   if (r.mode === "navigate") {
     e.respondWith((async () => {
-      try { const res = await fetch(r); if (res.ok) (await caches.open(VERSION)).put(r, res.clone()); return res; }
+      try { const res = await fetch(r, { cache: "no-cache" }); if (res.ok) (await caches.open(VERSION)).put(r, res.clone()); return res; }
       catch (err) { return (await caches.match(r, { ignoreSearch: true })) || new Response(OFFLINE, { headers: { "content-type": "text/html; charset=utf-8" } }); }
     })());
     return;
