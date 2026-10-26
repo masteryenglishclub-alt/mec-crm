@@ -71,10 +71,13 @@
       let paint = null; const grid = M.$(".dsp-grid");
       const apply = (el) => { if (!el || !el.dataset.s || el.disabled) return; paint ? cur.add(el.dataset.s) : cur.delete(el.dataset.s);
         el.classList.toggle("on", paint); el.setAttribute("aria-pressed", String(paint)); if (!el.classList.contains("cls")) el.textContent = paint ? "✓" : ""; };
-      grid.addEventListener("pointerdown", (e) => { const el = e.target.closest(".dsp-c"); if (!el || el.disabled) return; e.preventDefault(); paint = !cur.has(el.dataset.s); apply(el); });
+      // Mouse: clic o arrastrar para marcar varios. Celular/tablet: el dedo DESLIZA la cuadrícula y un toque marca o desmarca.
+      let mouse = false;
+      grid.addEventListener("pointerdown", (e) => { if (e.pointerType !== "mouse") return; const el = e.target.closest(".dsp-c"); if (!el || el.disabled) return;
+        e.preventDefault(); mouse = true; paint = !cur.has(el.dataset.s); apply(el); });
       grid.addEventListener("pointermove", (e) => { if (paint === null) return; apply(document.elementFromPoint(e.clientX, e.clientY)?.closest(".dsp-c")); });
-      const end = () => { if (paint !== null) { paint = null; draw(); } }; addEventListener("pointerup", end, { once: true }); addEventListener("pointercancel", end, { once: true });
-      grid.addEventListener("keydown", (e) => { const el = e.target.closest(".dsp-c"); if (el && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); paint = !cur.has(el.dataset.s); apply(el); paint = null; draw(); } });
+      const end = () => { setTimeout(() => (mouse = false), 0); if (paint !== null) { paint = null; draw(); } }; addEventListener("pointerup", end, { once: true }); addEventListener("pointercancel", end, { once: true });
+      grid.addEventListener("click", (e) => { const el = e.target.closest(".dsp-c"); if (!el || el.disabled || mouse) return; paint = !cur.has(el.dataset.s); apply(el); paint = null; draw(); });
     }
     await load();
     return { dirty };
