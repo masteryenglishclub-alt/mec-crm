@@ -32,9 +32,10 @@
     code = list[0].code; const t = list[0]; setBg("intro");
     const prev = t.last_done ? await T.qtMyResult(code).catch(() => null) : null;
     const welcome = (intro) => { app.innerHTML = `<section class="tst-card"><h1>${esc(t.name)}</h1><p class="tst-en">${esc(intro || "Contesta las preguntas eligiendo lo que más se parece a ti. No hay respuestas buenas ni malas.")}</p><p class="tst-es">Dura unos 10 minutos. Tus respuestas se guardan a medida que avanzas.</p>
-      <div class="tst-row"><button class="tst-btn" id="go">${t.in_progress ? "Continuar" : prev ? "Hacerlo de nuevo" : "Empezar"}</button>${prev ? `<button class="tst-btn sec" id="ver">Ver mi último resultado</button>` : ""}</div></section>`;
+      <div class="tst-row"><button class="tst-btn" id="go">${t.in_progress ? "Continuar" : "Empezar"}</button></div></section>`;
       M.$("#go").onclick = go(async () => { att = await T.qtStart(code); content = await T.qtContent(att); saved = Object.assign({}, content.saved || {}); idx = Math.min(content.questions.length - 1, Object.keys(saved).length); question(); });
       const v = M.$("#ver"); if (v) v.onclick = () => result(prev); };
+    if (prev && !t.in_progress) return result(prev); // 26-oct-2026: si ya lo terminó, ve su resultado (sin repetir)
     welcome(null);
   } catch (e) { app.innerHTML = `<section class="tst-card"><h1>Test de estilo de aprendizaje</h1><p>Todavía no está disponible. Estará listo muy pronto.</p><div class="tst-row">${back}</div></section>`; }
 })();
