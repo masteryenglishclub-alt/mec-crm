@@ -56,3 +56,4 @@ body.tst{--bg:url(../img/test-nivel/fondo-intro.svg);min-height:100vh;margin:0;b
 .tst-barra i{display:block;height:100%;width:var(--v);background:#3ccf8e}
 .tst-ok{color:#3ccf8e}.tst-mal{color:#ff9a8a}
 .tst-tabla td:last-child{white-space:nowrap}@media (max-width:480px){.tst-barra{width:56px}}
+.tst-sep{margin-top:18px!important;padding-top:12px;border-top:1px solid #233650}
