@@ -17,15 +17,16 @@
       async pmSpeakSave(att, qn, blob, seconds, folder) { const ext = /mp4/.test(blob.type) ? "mp4" : /ogg/.test(blob.type) ? "ogg" : "webm", path = folder + "/q" + qn + "." + ext, cl = await c();
         const up = await cl.storage.from(SPEAK).upload(path, blob, { contentType: blob.type || "audio/webm", upsert: true }); if (up.error) throw new Error(up.error.message);
         return rpc("pm_speaking_register", { p_attempt: att, p_q: qn, p_path: path, p_duration: seconds }); },
-      pmFinish: (a) => rpc("pm_finish", { p_attempt: a }), pmMyAttempts: () => rpc("pm_my_attempts"),
+      pmFinish: (a) => rpc("pm_finish", { p_attempt: a }), pmMyAttempts: () => rpc("pm_my_attempts_v2").catch(() => rpc("pm_my_attempts")),
       async pmStaffAttempts(studentId) { const cl = await c(); let r = cl.from("pm_attempts").select("*").neq("status", "cancelled").order("started_at", { ascending: false }); if (studentId) r = r.eq("student_id", studentId);
-        const rows = await q(r), all = await api.listStudents().catch(() => []), nm = {}; all.forEach((s) => (nm[s.id] = s.full_name)); return rows.map((a) => Object.assign(a, { student_name: nm[a.student_id] || "Estudiante" })); },
+        const rows = await q(r), all = await api.listStudents().catch(() => []), nm = {}; all.forEach((s) => (nm[s.id] = s.full_name));
+        (await rpc("pm_student_names").catch(() => [])).forEach((x) => { if (!nm[x.student_id]) nm[x.student_id] = x.full_name; }); return rows.map((a) => Object.assign(a, { student_name: nm[a.student_id] || "Estudiante" })); },
       async pmWriting(att) { const cl = await c(), a = (await q(cl.from("pm_attempts").select("writing_item, writing_text, writing_skipped").eq("id", att)))[0] || {}, it = a.writing_item ? (await q(cl.from("pm_items").select("stem").eq("id", a.writing_item)))[0] : null;
         return { prompt: it ? it.stem : null, text: a.writing_text || null, skipped: !!a.writing_skipped }; },
       async pmSpeakingInfo(att) { const cl = await c(), a = (await q(cl.from("pm_attempts").select("speaking_item").eq("id", att)))[0] || {}, it = a.speaking_item ? (await q(cl.from("pm_items").select("stem").eq("id", a.speaking_item)))[0] : null;
         const rec = await q(cl.from("pm_speaking").select("q_no, storage_path, takes, duration_s").eq("attempt_id", att)), o = {}; rec.forEach((r) => (o[r.q_no] = { path: r.storage_path, takes: r.takes, seconds: r.duration_s })); return { questions: it ? it.stem.split(" | ") : [], recordings: o }; },
       async pmSpeakUrl(path) { const { data, error } = await (await c()).storage.from(SPEAK).createSignedUrl(path, 300); if (error) throw new Error(error.message); return data.signedUrl; },
-      pmDetail: (a) => rpc("pm_attempt_detail", { p_attempt: a }),
+      pmDetail: (a) => rpc("pm_attempt_detail_v2", { p_attempt: a }).catch(() => rpc("pm_attempt_detail", { p_attempt: a })),
       async pmRubric() { const rows = await q((await c()).from("pm_rubric").select("*").order("ord")), o = { writing: [], speaking: [] }; rows.forEach((r) => o[r.kind].push([r.code, r.label, r.d3, r.d2, r.d1, r.d0])); return o; },
       pmGrade: (a, w, s, n) => rpc("pm_grade", { p_attempt: a, p_w: w || null, p_s: s || null, p_notes: n || {} }), pmApprove: (a, ok) => rpc("pm_approve", { p_attempt: a, p_approve: !!ok }),
       pmSetInterview: (a, o) => rpc("pm_set_interview", { p_attempt: a, p_outcome: o }), pmCancel: (a) => rpc("pm_cancel", { p_attempt: a }),
@@ -39,7 +40,8 @@
       qtList: () => rpc("qt_list"), qtStart: (c2) => rpc("qt_start", { p_code: c2 }), qtContent: (a) => rpc("qt_content", { p_attempt: a }), qtSave: (a, qid, o) => rpc("qt_save", { p_attempt: a, p_qid: qid, p_opt: o }),
       qtSubmit: (a) => rpc("qt_submit", { p_attempt: a }), qtMyResult: (c2) => rpc("qt_my_result", { p_code: c2 }),
       async qtStaffAttempts(studentId) { const cl = await c(); let r = cl.from("qt_attempts").select("id, student_id, completed_at, counts, pct, result_code").eq("status", "done").order("completed_at", { ascending: false }); if (studentId) r = r.eq("student_id", studentId);
-        const rows = await q(r), all = await api.listStudents().catch(() => []), nm = {}; all.forEach((s) => (nm[s.id] = s.full_name)); return rows.map((a) => Object.assign(a, { student_name: nm[a.student_id] })); }
+        const rows = await q(r), all = await api.listStudents().catch(() => []), nm = {}; all.forEach((s) => (nm[s.id] = s.full_name));
+        (await rpc("pm_student_names").catch(() => [])).forEach((x) => { if (!nm[x.student_id]) nm[x.student_id] = x.full_name; }); return rows.map((a) => Object.assign(a, { student_name: nm[a.student_id] })); }
     };
   }
   const demo = api.mode === "demo";
