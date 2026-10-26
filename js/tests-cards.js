@@ -1,6 +1,7 @@
-/* MEC CRM – tarjetas de tests para el ESTUDIANTE (Inicio y Mi espacio). Solo lenguaje neutro:
-   nunca muestra nivel, puntajes ni rúbrica. «Mi punto de partida» solo dice en curso / en revisión / completado.
-   El resultado por categoría solo aparece si coordinación enciende pm_student_ve_perfil (apagado por defecto). */
+/* MEC CRM – tarjetas de tests para el ESTUDIANTE (Inicio y Mi espacio).
+   «Mi punto de partida»: en curso / en revisión / completado. Decisión del dueño (25-oct-2026): al quedar el resultado FINAL
+   (cuando el teacher califica) el estudiante ve su nivel, su clase de inicio, el resultado por habilidad y por subnivel, y las notas del teacher.
+   Nunca ve la rúbrica ni las respuestas correctas. */
 (function () {
   const M = window.MEC, esc = M.esc;
   const CAT = { listening: "Listening", reading: "Reading", use_of_english: "Use of English", vocabulary: "Vocabulary", writing: "Writing", speaking: "Speaking" };
@@ -14,16 +15,35 @@
     return o;
   }
   const neutralBars = (r) => M.tcharts.bars(r.bars.map((b) => ({ label: b.label, value: b.pct })), { numbers: false, colors: M.tcharts.COLORS, title: "Cómo prefieres aprender", labelW: 120 });
-  const pmBox = (o) => { const a = o.pm[0], s = a ? ST[a.state] : null; let cats = "";
-    if (a && a.cats) cats = M.tcharts.radar(Object.keys(CAT).map((k) => ({ label: CAT[k], value: a.cats[k] && a.cats[k].n ? (a.cats[k].c / a.cats[k].n) * 100 : null })), { title: "Tu resultado por categoría" });
-    return `<div class="sp-card tst-ent" data-tst="pm"><h2>Mi punto de partida</h2><p>${a ? `Estado: <span class="tst-estado">${esc(s[0])}</span>` : "Un recorrido de unos 30 a 45 minutos para ubicarte en el mejor lugar para empezar."}</p>${cats}
+  const pct = (x) => (x && x.n ? Math.round((x.c / x.n) * 100) : null);
+  /* Resultado completo de «Mi punto de partida» (solo cuando ya hay resultado final) */
+  function pmResult(a, opts = {}) {
+    const r = a && a.result; if (!r) return "";
+    const n = r.start_class_number, code = n ? M.classCode(n) : "";
+    const cats = a.cats ? Object.keys(CAT).filter((k) => a.cats[k] && a.cats[k].n) : [];
+    const steps = {}; (Array.isArray(r.steps) ? r.steps : []).forEach((st) => { const b = st[0], c = Number(st[2]) || 0, t = Number(st[3]) || 0; if (!b || !t) return; steps[b] = steps[b] || { c: 0, n: 0 }; steps[b].c += c; steps[b].n += t; });
+    const radar = opts.compact || cats.length < 3 ? "" : M.tcharts.radar(Object.keys(CAT).map((k) => ({ label: CAT[k], value: a.cats[k] && a.cats[k].n ? pct(a.cats[k]) : null })), { title: "Tu resultado por habilidad" });
+    const agendar = r.placement === "omitido" ? '<p class="sp-small">Como ya tienes clases tomadas, MEC revisará contigo desde qué clase sigues.</p>'
+      : n ? `<p><a class="sp-btn oro" href="#solicitar" data-tst-agendar>Agendar mi clase ${esc(code)}</a></p>` : "";
+    return `<div class="tst-res">
+      <p class="tst-nivel">Tu nivel: <b>${esc(r.level || "—")}</b> <span class="sp-small">(Marco Común Europeo)</span></p>
+      ${n ? `<p class="tst-inicio">Tu clase de inicio: <b>${esc(code)}</b>${r.start_class_label ? ` <span class="sp-small">· ${esc(r.start_class_label)}</span>` : ""}</p>` : ""}${agendar}
+      ${radar}
+      ${cats.length ? `<h3>Por habilidad</h3><table class="tst-tabla"><thead><tr><th>Habilidad</th><th>Resultado</th><th></th></tr></thead><tbody>${cats.map((k) => { const v = pct(a.cats[k]);
+        return `<tr><td>${esc(CAT[k])}</td><td>${a.cats[k].c} de ${a.cats[k].n}</td><td><span class="tst-barra" style="--v:${v}%"><i></i></span> ${v}%</td></tr>`; }).join("")}</tbody></table>` : ""}
+      ${Object.keys(steps).length ? `<h3>Por subnivel</h3><table class="tst-tabla"><thead><tr><th>Subnivel</th><th>Aciertos</th><th></th></tr></thead><tbody>${Object.keys(steps).map((b) => { const v = pct(steps[b]);
+        return `<tr><td>${esc(b)}</td><td>${steps[b].c} de ${steps[b].n}</td><td><span class="tst-barra" style="--v:${v}%"><i></i></span> ${v}%</td></tr>`; }).join("")}</tbody></table>` : ""}
+      ${r.strengths ? `<h3>Tus fortalezas</h3><p>${esc(r.strengths)}</p>` : ""}${r.to_work_on ? `<h3>Para trabajar</h3><p>${esc(r.to_work_on)}</p>` : ""}</div>`;
+  }
+  const pmBox = (o) => { const a = o.pm[0], s = a ? ST[a.state] || ST.en_revision : null;
+    return `<div class="sp-card tst-ent" data-tst="pm"><h2>Mi punto de partida</h2><p>${a ? `Estado: <span class="tst-estado">${esc(s[0])}</span>` : "Un recorrido de unos 30 a 45 minutos para ubicarte en el mejor lugar para empezar."}</p>${pmResult(a)}
       <p><a class="sp-btn oro" href="test-nivel.html" ${a && !s[1] ? 'aria-disabled="true" style="display:none"' : ""}>${a ? s[1] || "" : "Empezar"}</a></p></div>`; };
   const qtBox = (o) => { const t = o.list[0], r = o.qt;
     return `<div class="sp-card tst-ent" data-tst="qt"><h2>${esc(t ? t.name : "Test de estilo de aprendizaje")}</h2>${r ? `<p><b>${esc(r.title)}</b></p>${neutralBars(r)}` : "<p>36 preguntas cortas para descubrir cómo te gusta aprender y recibir ideas para estudiar inglés.</p>"}
       <p><a class="sp-btn oro" href="test-estilo.html">${t && t.in_progress ? "Continuar" : r ? "Hacerlo de nuevo" : "Empezar"}</a></p></div>`; };
   /* Tarjeta completa para Inicio (perfil) y versión compacta para Mi espacio */
   async function self() { const o = await load(); if (!o) return ""; return `<section class="sp-card ancho" id="tst-mis"><h2>Mis tests</h2><div class="tst-entrada">${o.fl.pm ? pmBox(o) : ""}${o.fl.qt ? qtBox(o) : ""}</div></section>`; }
-  async function entry() { const o = await load(); if (!o) return ""; return `<section class="sp-card" id="tst-esp"><h2>Mis tests</h2>${o.fl.pm ? `<p><b>Mi punto de partida</b> · ${o.pm[0] ? esc(ST[o.pm[0].state][0]) : "aún no lo has hecho"} <a class="sp-btn" href="test-nivel.html">${o.pm[0] ? "Abrir" : "Empezar"}</a></p>` : ""}
+  async function entry() { const o = await load(); if (!o) return ""; return `<section class="sp-card" id="tst-esp"><h2>Mis tests</h2>${o.fl.pm ? `<p><b>Mi punto de partida</b> · ${o.pm[0] ? esc((ST[o.pm[0].state] || ST.en_revision)[0]) : "aún no lo has hecho"}${o.pm[0] && o.pm[0].result ? "" : ` <a class="sp-btn" href="test-nivel.html">${o.pm[0] ? "Abrir" : "Empezar"}</a>`}</p>${pmResult(o.pm[0])}` : ""}
       ${o.fl.qt ? `<p><b>${esc(o.list[0] ? o.list[0].name : "Test de estilo de aprendizaje")}</b> · ${o.qt ? esc(o.qt.title) : "aún no lo has hecho"} <a class="sp-btn" href="test-estilo.html">${o.qt ? "Ver / repetir" : "Empezar"}</a></p>` : ""}</section>`; }
   /* Para la tarjeta «Estilo de aprendizaje» del perfil propio: barras neutras sin números */
   async function estiloSelf(prof) {
@@ -32,5 +52,5 @@
     const bars = r ? neutralBars(r) : prof && prof.style_visual != null ? M.tcharts.bars([{ label: "Mirando", value: prof.style_visual }, { label: "Escuchando", value: prof.style_auditory }, { label: "Haciendo", value: prof.style_kinesthetic }], { numbers: false, colors: M.tcharts.COLORS, title: "Cómo prefieres aprender", labelW: 120 }) : "";
     return `${any ? (r ? `<p><b>${esc(r.title)}</b></p>` : "") + bars : '<p class="sp-pend">Aún no hay estilo de aprendizaje registrado.</p>'}${fl2.qt ? `<p><a class="sp-btn" href="test-estilo.html">${any ? "Hacer el test de nuevo" : "Hacer el test"}</a></p>` : '<p class="sp-small">El test llegará muy pronto.</p>'}`;
   }
-  M.testsCards = { self, entry, estiloSelf };
+  M.testsCards = { self, entry, estiloSelf, pmResult };
 })();

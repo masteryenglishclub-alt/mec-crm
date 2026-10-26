@@ -48,3 +48,11 @@ body.tst{--bg:url(../img/test-nivel/fondo-intro.svg);min-height:100vh;margin:0;b
 @media (max-width:760px){.tst-g2{grid-template-columns:minmax(0,1fr)}}
 
 .tst-staff table,.stt-in .sp-card table{display:block;overflow-x:auto;max-width:100%}
+/* 25-oct-2026 · resultado de «Mi punto de partida» para el estudiante */
+.tst-res{margin-top:6px}.tst-res h3{margin:14px 0 4px;font-size:1rem;color:#f0c46a}
+.tst-nivel{font-size:1.1rem}.tst-nivel b,.tst-inicio b{color:#f3d38c;font-size:1.2rem}
+.tst-tabla{width:100%;border-collapse:collapse;font-size:.9rem}.tst-tabla td,.tst-tabla th{padding:5px 6px;border-bottom:1px solid #233650;text-align:left}
+.tst-barra{display:inline-block;width:90px;height:8px;border-radius:4px;background:#132438;vertical-align:middle;overflow:hidden}
+.tst-barra i{display:block;height:100%;width:var(--v);background:#3ccf8e}
+.tst-ok{color:#3ccf8e}.tst-mal{color:#ff9a8a}
+.tst-tabla td:last-child{white-space:nowrap}@media (max-width:480px){.tst-barra{width:56px}}
