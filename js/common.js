@@ -213,7 +213,7 @@
         <span>MASTERY ENGLISH CLUB<small>CRM INTERNO</small></span></a>
       <nav class="tabs">${tabs.map((t, i) => `<button data-tab="${t[0]}" class="${i ? "" : "on"}">${t[1]}</button>`).join("")}</nav>
       <div class="who">${M.api.mode === "demo" ? '<span class="demo-badge">MODO DEMO</span>' : ""}
-        <span>${M.esc(user.full_name)}</span>${user.role === "student" || !M.feature("clave_obligatoria") ? "" : '<button class="btn ghost sm" data-cambiar-clave title="Cambiar contraseña">Contraseña</button>'}<button class="btn ghost sm" id="logout">Salir</button></div></div>`;
+        <span>${M.esc(user.full_name)}</span><button class="btn ghost sm" data-cambiar-clave title="Cambiar contraseña">Contraseña</button><button class="btn ghost sm" id="logout">Salir</button></div></div>`;
     document.body.prepend(el);
     el.querySelector("#logout").onclick = async () => { await M.api.signOut(); location.href = "login.html"; };
     M.$$("nav.tabs button", el).forEach((b) => (b.onclick = () => {

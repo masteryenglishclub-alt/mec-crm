@@ -123,7 +123,7 @@
     return `<div class="sp-grid">${nota}
       ${card("Datos", `<dl class="sp-dl"><dt>Estudiante</dt><dd>${esc(s.full_name || "—")}</dd><dt>En MEC desde</dt><dd>${s.start_date ? M.fmtDate(String(s.start_date).length === 10 ? s.start_date + "T12:00:00Z" : s.start_date) : "—"}</dd><dt>Modalidad</dt><dd>${s.program === "kids" ? "Kids" : "Adultos"}</dd><dt>Teacher</dt><dd>${esc(s.teacher_name || "Por asignar")}</dd>
         ${(ctx.self || ctx.admin) && M.feature("correo_recuperacion") ? recoveryDd(s, ctx.self) : ""}
-        <dt>Nivel actual</dt><dd>${lvl ? `<span class="sp-nivel">${lvl.levelCode}</span> ${lvl.sub ? "Subnivel " + lvl.levelCode + "." + lvl.sub : "Repaso"} · ${esc(lvl.levelName || s.level_name || "")}` : "—"}</dd></dl>${ctx.self && M.feature("clave_obligatoria") ? '<p class="sp-clave"><button type="button" class="sp-btn" data-cambiar-clave>Cambiar contraseña</button></p>' : ""}`)}
+        <dt>Nivel actual</dt><dd>${lvl ? `<span class="sp-nivel">${lvl.levelCode}</span> ${lvl.sub ? "Subnivel " + lvl.levelCode + "." + lvl.sub : "Repaso"} · ${esc(lvl.levelName || s.level_name || "")}` : "—"}</dd></dl>${ctx.self ? '<p class="sp-clave"><button type="button" class="sp-btn" data-cambiar-clave>Cambiar contraseña</button></p>' : ""}`)}
       ${card(ctx.self ? "Mi paquete" : "Paquete", paq)}
       ${historyCard(s, ctx.classes, "Historial de clases", { history: ctx.history, used: live.reduce((a, p) => a + (p.classes_used || 0), 0), self: ctx.self })}
       ${currentCard(s)}
