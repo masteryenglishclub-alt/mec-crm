@@ -4,7 +4,7 @@
    - Páginas: primero la red (siempre lo más nuevo); sin conexión, la última copia o un aviso.
    - css/js/img/fuentes: copia rápida y se actualiza por detrás (los ?v= de cada archivo evitan versiones viejas).
    Para forzar a todos a limpiar la caché: cambiar VERSION. */
-const VERSION = "mec-20261026b";
+const VERSION = "mec-20261109a";
 const STATIC = /\.(css|js|webp|png|jpe?g|svg|ico|ttf|woff2?|webmanifest)$/i;
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (e) => e.waitUntil((async () => {
