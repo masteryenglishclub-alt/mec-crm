@@ -190,6 +190,7 @@
       v.querySelector(".st-nombre").focus(); if (M.testsStaff) M.testsStaff.bindCards(v, () => open(id));
       $("#pf-editar").onclick = () => editStudent(s, prof, classes, () => open(id));
       $("#pf-volver").onclick = () => { v.hidden = true; $("#pf-lista").hidden = false; const b = root.querySelector(`[data-pf="${id}"]`); if (b) b.focus(); };
+      if (opts.onOpenStudent) await opts.onOpenStudent(v, s);
     });
     ["#pf-q", "#pf-niv", "#pf-prof"].forEach((s) => { const el = $(s); if (el) el.addEventListener("input", draw); });
     $("#pf-grid").addEventListener("click", (e) => { const b = e.target.closest("[data-pf]"); if (b) open(b.dataset.pf); });
