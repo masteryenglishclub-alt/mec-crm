@@ -7,9 +7,13 @@
   else if (location.hash === "#espacio") tab = "espacio";
   else if (location.hash === "#noticias") tab = "noticias";
   else if (location.hash === "#disponibilidad") tab = "disponibilidad";
-  M.header(me, [["clases", "Mis clases"], ["disponibilidad", "Mi disponibilidad"], ["solicitudes", "Solicitudes"], ["noticias", "Noticias y eventos"], ["espacio", "Mi espacio"], ["estudiantes", "Estudiantes"], ["tests", "Tests"], ["progreso", "Progreso mensual"], ["miperfil", "Mi perfil"], ["perfil", "Mi Meet"], ["kids", "Material Kids"]], (t) => { tab = t; render(); });
+  else if (["#biblioteca", "#material"].includes(location.hash)) tab = "biblioteca";
+  M.header(me, [["clases", "Mis clases"], ["disponibilidad", "Mi disponibilidad"], ["solicitudes", "Solicitudes"], ["noticias", "Noticias y eventos"], ["espacio", "Mi espacio"], ["estudiantes", "Estudiantes"], ["tests", "Tests"], ["progreso", "Progreso mensual"], ["miperfil", "Mi perfil"], ["perfil", "Mi Meet"], ["biblioteca", "Biblioteca"], ["kids", "Material Kids"]], (t) => { tab = t; if (["#biblioteca", "#material"].includes(location.hash)) history.replaceState(null, "", location.pathname + location.search); render(); });
   if (M.espacio && M.espacio.watch) M.espacio.watch();
-  const render = M.wrapErr(async () => { app.innerHTML = '<p class="muted">Cargando…</p>'; await views[tab](); });
+  window.addEventListener("hashchange", () => {
+    if (["#biblioteca", "#material"].includes(location.hash) && tab !== "biblioteca") { tab = "biblioteca"; render(); }
+  });
+  const render = M.wrapErr(async () => { M.$$("[data-tab]").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab)); app.innerHTML = '<p class="muted">Cargando…</p>'; await views[tab](); });
   // Regla de decisión oficial (Rúbrica Conversacional v2.1, sección 4) solo para la vista previa; la base de datos decide.
   const decide = (s, kind) => {
     const v = ["fluency", "vocabulary", "grammar", "pronunciation", "comprehension_interaction", "task_completion"].map((k) => +s[k]);
@@ -31,6 +35,7 @@
       ${c.late_penalty && c.late_penalty !== "none" ? `<br><span class="small muted">${M.PENALTY_LABEL[c.late_penalty]}</span>` : ""}</div></div>`;
 
   const views = {
+    async biblioteca() { await M.biblioteca.view(app, { me, program: me.program }); },
     async kids() { await M.kidsMaterialView(app); },
     async tests() { await M.testsStaff.panel(app, "teacher"); },
     async disponibilidad() { await M.disponibilidad.view(app, { teacherId: me.id }); },

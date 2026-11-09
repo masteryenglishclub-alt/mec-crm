@@ -4,11 +4,16 @@
   const me = await M.requireRole("admin");
   let tab = "agenda", week = M.weekStart(new Date()), teacherFilter = "", reqStatus = "pending", estMode = "perfiles";
   if (location.hash === "#solicitudes") tab = "solicitudes";
-  else if (["#noticias", "#moderacion", "#disponibilidad"].includes(location.hash)) tab = location.hash.slice(1);
-  M.header(me, [["agenda", "Agenda"], ["disponibilidad", "Disponibilidad"], ["solicitudes", "Solicitud de clases"], ["estudiantes", "Estudiantes"], ["tests", "Tests"], ["asistencia", "Asistencia"], ["paquetes", "Paquetes"], ["teachers", "Teachers"], ["noticias", "Noticias"], ["moderacion", "Moderación"], ["kids", "Material Kids"], ["cargar", "Cargar datos"]], (t) => { tab = t; render(); });
-  const render = M.wrapErr(async () => { app.innerHTML = '<p class="muted">Cargando…</p>'; await views[tab](); });
+  else if (["#noticias", "#moderacion", "#disponibilidad", "#biblioteca"].includes(location.hash)) tab = location.hash.slice(1);
+  else if (location.hash === "#material") tab = "biblioteca";
+  M.header(me, [["agenda", "Agenda"], ["disponibilidad", "Disponibilidad"], ["solicitudes", "Solicitud de clases"], ["estudiantes", "Estudiantes"], ["tests", "Tests"], ["asistencia", "Asistencia"], ["paquetes", "Paquetes"], ["teachers", "Teachers"], ["noticias", "Noticias"], ["moderacion", "Moderación"], ["biblioteca", "Biblioteca"], ["kids", "Material Kids"], ["cargar", "Cargar datos"]], (t) => { tab = t; if (["#biblioteca", "#material"].includes(location.hash)) history.replaceState(null, "", location.pathname + location.search); render(); });
+  window.addEventListener("hashchange", () => {
+    if (["#biblioteca", "#material"].includes(location.hash) && tab !== "biblioteca") { tab = "biblioteca"; render(); }
+  });
+  const render = M.wrapErr(async () => { M.$$("[data-tab]").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab)); app.innerHTML = '<p class="muted">Cargando…</p>'; await views[tab](); });
 
   const views = {
+    async biblioteca() { await M.biblioteca.view(app, { me, program: me.program }); },
     async kids() { await M.kidsMaterialView(app); },
     async tests() { await M.testsStaff.panel(app, "admin"); },
     async disponibilidad() { await M.disponibilidad.view(app, { admin: true, teacherId: me.id }); },

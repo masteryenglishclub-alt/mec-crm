@@ -4,8 +4,8 @@
   const me = await M.requireRole("student");
   let tab = "inicio", calFocus = null, fbSelect = null;
   let week = M.weekStart(new Date(Date.now() + 864e5 * 7)), calFilter = "";  // semana siguiente por defecto
-  const TABS = [["inicio", "Inicio"], ["solicitar", "Calendario"], ["noticias", "Noticias y eventos"], ["espacio", "Mi espacio"], ["teachers", "Teachers"], ["feedback", "Feedback"], ["material", "Material"]];
-  const fromHash = () => { const h = location.hash.slice(1), t = h.split("/")[0]; return TABS.some((x) => x[0] === t) ? t : null; };
+  const TABS = [["inicio", "Inicio"], ["solicitar", "Calendario"], ["noticias", "Noticias y eventos"], ["espacio", "Mi espacio"], ["teachers", "Teachers"], ["feedback", "Feedback"], ["biblioteca", "Biblioteca"]];
+  const fromHash = () => { const h = location.hash.slice(1), raw = h.split("/")[0], t = raw === "material" ? "biblioteca" : raw; return TABS.some((x) => x[0] === t) ? t : null; };
   tab = fromHash() || "inicio";
   const goTab = (t) => { tab = t; M.$$("[data-tab]").forEach((b) => b.classList.toggle("on", b.dataset.tab === t)); render(); };
   window.addEventListener("hashchange", () => { const t = fromHash(); if (!t) return;
@@ -159,30 +159,9 @@
       M.$$(".fb-item").forEach((b) => (b.onclick = () => fbSelect(b.dataset.fb)));
       if (want && sel && sel.id === want) M.$("#fb-v").focus({ preventScroll: true });
     },
-    async material() { // Material: solo los libros del nivel y la sección del estudiante (la base lo impone con RLS books_read y el bucket privado 'materiales')
-      const s = await data(), li = s.current_level, lvl = M.LEVELS[li - 1] || "", kids = s.program === "kids";
-      const CAT = [ // portadas reales (img/web/libros) · se emparejan con la tabla books por slug o por carpeta del PDF
-        { key: "a1/student-book", slug: "a1-students-book", level: 1, title: "A1 Student's Book", cover: "a1-students-book", desc: "Libro principal del curso A1: las unidades de cada subnivel." },
-        { key: "a1/practice-book", slug: "a1-practice-book", level: 1, title: "A1 Practice Book", cover: "a1-practice-book", desc: "Ejercicios para practicar después de cada clase." },
-        { key: "a1/speak-up", slug: "a1-speak-up", level: 1, title: "Speak Up A1", cover: "a1-speak-up", desc: "Conversación guiada para ganar fluidez." },
-        { key: "a2/practice-book", slug: "a2-practice-book", level: 2, title: "A2 Practice Book", cover: "a2-practice-book", desc: "Ejercicios para practicar el curso A2." }];
-      const rows = kids ? [] : (await api.listBooks()).filter((x) => !x.teacher_only && x.level_index === li && (x.program === s.program || x.program === "ambos"));
-      const units = rows.length ? await (api.listBookUnits ? api.listBookUnits().catch(() => []) : []) : [];
-      const match = (c) => rows.find((x) => x.slug === c.slug || String(x.storage_path || "").startsWith(c.key + "/"));
-      const mine = kids ? [] : CAT.filter((c) => c.level === li).map((c) => Object.assign({}, c, { row: match(c) })).filter((c) => c.row);
-      const card = (c) => { const x = c.row, u = units.filter((y) => y.book_slug && y.book_slug === x.slug).sort((p, q) => p.sort_order - q.sort_order);
-        return `<article class="sp-card mt-libro"><picture><source srcset="img/web/libros/${c.cover}-thumb-600x800.webp?v=20261016t" type="image/webp"><img src="img/web/libros/${c.cover}-thumb-600x800.jpg?v=20261016t" width="600" height="800" alt="Portada de ${M.esc(c.title)}" decoding="async"></picture>
-          <div class="mt-info"><h2>${M.esc(c.title)}</h2><p class="sp-small">${M.esc(c.desc)}</p>
-          ${x.storage_path ? `<p><button class="sp-btn oro" data-pdf="${M.esc(x.storage_path)}">Abrir PDF</button></p>${u.length ? `<p class="sp-small">Ir a la unidad: ${u.map((y) => `<button class="sp-btn" data-pdf="${M.esc(x.storage_path)}" data-page="${+y.page_start}">${M.esc(y.label)}</button>`).join(" ")}</p>` : ""}`
-            : x.url ? `<a class="sp-btn oro" href="${M.esc(x.url)}" target="_blank" rel="noopener">Abrir</a>` : '<p class="sp-pend">Próximamente</p>'}</div></article>`; };
-      const sec = kids
-        ? `<section class="mt-sec" aria-labelledby="mt-k"><h2 id="mt-k" class="mt-h">Mastery4Kids</h2><div class="sp-card mt-pronto"><h2>Próximamente</h2><p>Estamos preparando los libros de Mastery4Kids. Muy pronto los verás aquí.</p></div></section>`
-        : `<section class="mt-sec" aria-labelledby="mt-a"><h2 id="mt-a" class="mt-h">Estudiantes${lvl ? ` · curso ${M.esc(lvl)}` : ""}</h2>
-            ${mine.length ? `<div class="mt-grid">${mine.map(card).join("")}</div>` : `<div class="sp-card mt-pronto"><h2>Próximamente</h2><p>Aún no hay material publicado para ${lvl ? "tu curso " + M.esc(lvl) : "tu curso"}.</p></div>`}</section>`;
-      app.innerHTML = `<div class="smc mtb"><div class="stt-in"><h1>Material</h1><p class="mt-intro">Aquí ves el material de tu curso actual.${s.hasPackage ? "" : " " + S.SIN_PAQ + "."}</p>${sec}</div></div>`;
-      M.$$("[data-pdf]").forEach((el) => (el.onclick = M.wrapErr(async () => { const w = window.open("about:blank", "_blank"); if (w) w.opener = null;
-        try { const url = await api.bookFileUrl(el.dataset.pdf); const full = url + (el.dataset.page ? "#page=" + el.dataset.page : "");
-          if (w) w.location = full; else location.href = full; } catch (e) { if (w) w.close(); throw e; } })));
+    async biblioteca() {
+      const s = await data();
+      await M.biblioteca.view(app, { me, currentLevel: s.current_level, program: s.program, hasPackage: s.hasPackage });
     }
   };
   render();
