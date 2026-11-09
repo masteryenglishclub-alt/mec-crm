@@ -10,7 +10,7 @@
   window.addEventListener("hashchange", () => {
     if (["#biblioteca", "#material"].includes(location.hash) && tab !== "biblioteca") { tab = "biblioteca"; render(); }
   });
-  const render = M.wrapErr(async () => { M.$$("[data-tab]").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab)); app.innerHTML = '<p class="muted">Cargando…</p>'; await views[tab](); });
+  const render = M.wrapErr(async () => { if (M.privateFeedback) M.privateFeedback.destroyIn(app); M.$("[data-tab]").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab)); app.innerHTML = '<p class="muted">Cargando…</p>'; await views[tab](); });
 
   const views = {
     async biblioteca() { await M.biblioteca.view(app, { me, program: me.program }); },
@@ -64,7 +64,7 @@
       const bindSw = () => M.$$("[data-em]").forEach((b) => (b.onclick = () => { estMode = b.dataset.em; render(); }));
       if (estMode === "perfiles") {
         app.innerHTML = `<h1>Estudiantes</h1>${sw}<div id="pf-root"></div>`; bindSw();
-        return M.perfil.studentsBrowser(M.$("#pf-root"), { students: st, showTeacher: true, admin: true });
+        return M.perfil.studentsBrowser(M.$("#pf-root"), { students: st, showTeacher: true, admin: true, onOpenStudent: (profileRoot, student) => M.privateFeedback.attachAdminProfile(profileRoot, student) });
       }
       const isT = (p) => p.is_test || (st.find((s) => s.id === p.student_id) || {}).is_test, real = st.filter((s) => !s.is_test), pkR = pk.filter((p) => !isT(p) && !p.excluded_from_revenue), nT = st.length - real.length;
       app.innerHTML = `<h1>Estudiantes y paquetes</h1>${sw}
