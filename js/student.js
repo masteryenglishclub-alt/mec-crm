@@ -14,7 +14,7 @@
   M.header(me, TABS, (t) => { tab = t; if (location.hash) history.replaceState(null, "", location.pathname + location.search); render(); });
   if (M.espacio && M.espacio.watch) M.espacio.watch();
   M.$$("[data-tab]").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab));
-  const render = M.wrapErr(async () => { fbSelect = null; app.innerHTML = '<p class="muted">Cargando…</p>'; await views[tab](); });
+  const render = M.wrapErr(async () => { if (M.privateFeedback) M.privateFeedback.destroyIn(app); fbSelect = null; app.innerHTML = '<p class="muted">Cargando…</p>'; await views[tab](); });
   const S = M.stSafe, data = async () => { const [s] = await api.listStudents(); return S.student(s); };
   const bstat = async () => S.booking(await api.bookingStatus().catch(() => null));
   const nice = (c) => c.class_type === "conversation_lab" ? "Conversation Lab · conversación guiada" : M.TYPE_LABEL[c.class_type];
@@ -152,6 +152,9 @@
         n.textContent = sel ? `Entregas de la clase ${sel.class_number ? M.classCode(sel.class_number) : "de refuerzo"} (se guardan también en Mi espacio).` : "Tus entregas (se guardan también en Mi espacio).";
         M.espacio.subsBox(box, { me, role: "student", kid: st.kid, upload: !st.suspended, class_id: sel ? sel.id : null, teacher_id: sel ? sel.teacher_id : s.teacher_id, empty: "Aún no enviaste ejercicios para esta clase." }); };
       paintUp();
+      const privateFeedbackHost = document.createElement("section");
+      M.$(".stt-in", app).appendChild(privateFeedbackHost);
+      await M.privateFeedback.mountStudent(privateFeedbackHost);
       fbSelect = (id) => { const c = fbs.find((x) => x.id === id); if (!c) return; sel = c; M.$("#fb-v").innerHTML = viewer(c);
         M.$$(".fb-item").forEach((b) => { const on = b.dataset.fb === id; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on); });
         if (location.hash !== "#feedback/" + encodeURIComponent(id)) history.replaceState(null, "", "#feedback/" + encodeURIComponent(id));
