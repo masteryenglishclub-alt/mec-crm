@@ -92,9 +92,23 @@
     if (staff) groups.push({ key: "docentes", label: "Docentes", title: "Teacher’s Books", type: "staff", items: catalog.filter(isStaffItem) });
     const counter = catalog.filter((x) => COURSE_TYPES.has(x.type) || x.type === "story" || x.type === "teachers_book").length;
     const countLabel = (n, single, plural) => n + " " + (n === 1 ? single : plural);
+    const humanList = (labels) => labels.length < 2 ? (labels[0] || "") : labels.slice(0, -1).join(", ") + " y " + labels[labels.length - 1];
+    function groupBookLabels(group) {
+      return group.items.map((item) => group.type === "level" ? TYPE[item.type]
+        : group.type === "staff" ? (LEVELS[Number(item.level_index) - 1] || item.title || TYPE[item.type])
+        : item.title || TYPE[item.type]);
+    }
+    function collectionSubtitle(group) {
+      if (!group.items.length) return group.type === "staff" ? "Acceso reservado a teachers y administradores." : "Los materiales de esta colección se muestran según los permisos de tu cuenta.";
+      if (group.type === "staff") {
+        const levels = Array.from(new Set(group.items.map((item) => LEVELS[Number(item.level_index) - 1]).filter(Boolean)));
+        return "Guías y recursos disponibles" + (levels.length ? " de " + humanList(levels) : "") + ". Acceso reservado a teachers y administradores.";
+      }
+      if (group.type === "stories") return countLabel(group.items.length, "historia disponible", "historias disponibles") + " para disfrutar del inglés.";
+      return "En este estante: " + humanList(Array.from(new Set(groupBookLabels(group)))) + ".";
+    }
     function cluster(group) {
-      const titles = group.type === "level" ? ["Student’s Book", "Practice Book", "Speak Up"] : group.type === "staff" ? ["A1", "A2", "B1", "B2"] : ["Mitos", "Viajes", "Relatos", "Aventuras"];
-      return '<span class="bib-book-cluster" aria-hidden="true">' + titles.map((label, j) => '<span class="bib-spine bib-spine--' + j + '"><span class="bib-spine-rule"></span><b>' + esc(label) + '</b><small>MEC</small></span>').join("") + '</span>';
+      return '<span class="bib-book-cluster" aria-hidden="true">' + groupBookLabels(group).slice(0, 4).map((label, j) => '<span class="bib-spine bib-spine--' + (j % 4) + '"><span class="bib-spine-rule"></span><b>' + esc(label) + '</b><small>MEC</small></span>').join("") + '</span>';
     }
     const shelf = groups.map((g) => {
       const active = g.type === "level" && current === g.level, available = g.items.length;
@@ -117,7 +131,7 @@
         title = "Resultados de búsqueda"; subtitle = countLabel(items.length, "resultado", "resultados") + ' para “' + query + '”';
       } else if (group) {
         items = group.items; title = group.title;
-        subtitle = group.type === "staff" ? "Guías y recursos reservados para teachers y administradores." : group.type === "stories" ? "Historias y lecturas para disfrutar del inglés." : "Student’s Book, Practice Book y Speak Up en un mismo estante.";
+        subtitle = collectionSubtitle(group);
       } else return;
       detail.hidden = false;
       detail.innerHTML = '<header class="bib-collection-heading"><div><p class="bib-eyebrow">Estante abierto</p><h2 id="bib-collection-title">' + esc(title) + '</h2><p>' + esc(subtitle) + '</p></div><button type="button" class="bib-back" data-bib-close>' + icon("arrow") + ' Volver al estante</button></header>' + (items.length ? cards(items) : empty(group && group.type === "level" && role === "student" && current !== group.level ? "No hay libros disponibles para tu cuenta en este estante" : "En preparación", group && group.type === "level" && role === "student" && current !== group.level ? "Los materiales se muestran según el nivel y los permisos de tu curso." : "Aquí aparecerán las publicaciones de esta colección cuando estén disponibles."));
