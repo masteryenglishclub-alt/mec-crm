@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="768" viewBox="0 0 640 768">
+ <defs>
+  <linearGradient id="walnut" x2="1" y2=".12"><stop stop-color="#482a18"/><stop offset=".23" stop-color="#794b2d"/><stop offset=".55" stop-color="#62381f"/><stop offset=".78" stop-color="#865536"/><stop offset="1" stop-color="#4d2c1b"/></linearGradient>
+  <filter id="grain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".065 .0038" numOctaves="3" seed="27" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncR type="table" tableValues=".10 .52"/><feFuncG type="table" tableValues=".04 .30"/><feFuncB type="table" tableValues=".015 .15"/><feFuncA type="table" tableValues="0 .56"/></feComponentTransfer></filter>
+ </defs>
+ <rect width="640" height="768" fill="url(#walnut)"/>
+ <rect width="640" height="768" filter="url(#grain)" opacity=".72"/>
+ <g fill="none" stroke="#24130c" stroke-width="1.1" opacity=".19">
+  <path d="M23-8C17 87 39 120 32 225S8 414 24 527S40 693 23 780M55-8C79 91 53 166 62 259S83 460 62 570S44 727 55 780M108-8C87 105 113 162 106 244S94 353 110 459S131 622 108 780M149-8C173 127 137 190 147 306S174 510 152 623S138 706 149 780M205-8C189 115 215 175 202 287S178 466 201 588S221 712 205 780M249-8C265 112 238 208 253 293S277 444 254 552S234 717 249 780M315-8C291 120 334 166 320 257S296 420 317 539S336 693 315 780M371-8C390 88 363 151 369 254S391 442 373 559S355 713 371 780M423-8C398 106 435 175 421 288S397 451 425 574S442 707 423 780M475-8C498 104 466 182 479 279S492 459 477 569S455 717 475 780M537-8C514 101 543 173 534 280S517 458 539 578S557 713 537 780M594-8C613 123 579 180 594 306S609 474 591 582S580 713 594 780"/>
+ </g>
+ <g fill="none" stroke="#bd8750" stroke-width=".8" opacity=".14"><path d="M37 0C58 124 31 180 44 310S58 528 37 768M164 0C143 111 173 202 161 331S143 544 164 768M263 0C282 137 252 218 268 368S283 591 263 768M385 0C365 128 397 190 381 344S370 566 385 768M490 0C469 136 504 221 488 375S470 594 490 768M610 0C588 139 623 218 607 362S592 583 610 768"/></g>
+</svg>
