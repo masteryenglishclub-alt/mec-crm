@@ -39,6 +39,15 @@ async function click(h, index) {
   await h.root.handlers.click[0]({ target });
   return action;
 }
+function shelfHTML(h, key) {
+  const match = h.app.innerHTML.match(new RegExp('<button[^>]*data-bib-section="' + key + '"[^>]*>([\\s\\S]*?)</button>'.replace(/\\\\/g, "\\")));
+  assert.ok(match, "Missing shelf " + key); return match[1];
+}
+async function chooseSection(h, key) {
+  const section = new FakeElement("button"); section.dataset.bibSection = key;
+  await h.root.handlers.click[0]({ target: { closest: selector => selector === "[data-bib-section]" ? section : null } });
+  return h.root.querySelector("#bib-collection").innerHTML;
+}
 (async () => {
   await check("students never receive Teacher records in their visible catalog", () => {
     const h = harness();
@@ -122,5 +131,37 @@ async function click(h, index) {
     let resolve; const pending = new Promise(r => { resolve = r; }); const h = harness(); h.context.window.MEC.api.libraryListItems = () => pending;
     const render = h.view(); h.app.contains = () => false; h.app.innerHTML = "Other page"; resolve([book]); await render; assert.equal(h.app.innerHTML, "Other page");
   });
-  process.stdout.write("\n" + checked + " library UI/security checks passed.\n");
+  await check("two-book shelves across A1 to B2 omit unpublished Speak Up spines and descriptions", async () => {
+    const levels = [1,2,3,4], names = ["A1","A2","B1","B2"];
+    const books = levels.flatMap(level_index => [
+      { ...book, id: "s" + level_index, slug: names[level_index-1].toLowerCase() + "-student-book", level_index },
+      { ...book, id: "p" + level_index, slug: names[level_index-1].toLowerCase() + "-practice-book", type: "practice_book", title: names[level_index-1] + " Practice Book", level_index, sort_order: 2 },
+      { ...book, id: "u" + level_index, slug: names[level_index-1].toLowerCase() + "-speak-up", type: "speak_up", title: names[level_index-1] + " Speak Up", level_index, published: false }
+    ]);
+    const h = harness("admin", books); await h.view(); assert.doesNotMatch(h.app.innerHTML, /Speak Up/);
+    for (const level of names) {
+      const shelf = shelfHTML(h, "nivel-" + level.toLowerCase());
+      assert.equal((shelf.match(/class="bib-spine bib-spine--/g) || []).length, 2); assert.match(shelf, /Student/); assert.match(shelf, /Practice Book/); assert.match(shelf, /2 libros/);
+      const detail = await chooseSection(h, "nivel-" + level.toLowerCase()); assert.doesNotMatch(detail, /Speak Up/); assert.match(detail, /En este estante: Student.* y Practice Book\./); assert.equal((detail.match(/data-bib-open=/g) || []).length, 2);
+    }
+  });
+  await check("a genuinely published third book appears in its shelf and subtitle", async () => {
+    const h = harness("student", [book, { ...book, id: "p", slug: "a1-practice-book", type: "practice_book", title: "A1 Practice Book", sort_order: 2 }, { ...book, id: "u", slug: "a1-speak-up", type: "speak_up", title: "A1 Speak Up", sort_order: 3 }]); await h.view();
+    const shelf = shelfHTML(h, "nivel-a1"); assert.equal((shelf.match(/class="bib-spine bib-spine--/g) || []).length, 3); assert.match(shelf, /Speak Up/); assert.match(shelf, /3 libros/);
+    const detail = await chooseSection(h, "nivel-a1"); assert.match(detail, /En este estante: Student.*Practice Book y Speak Up\./); assert.equal((detail.match(/data-bib-open=/g) || []).length, 3);
+  });
+  await check("staff spine levels and subtitle follow only its available guides", async () => {
+    const h = harness("teacher", [{ ...teacher, title: "A1 guide" }, { ...teacher, id: "t4", slug: "b2-teachers-book", title: "B2 guide", level_index: 4 }]); await h.view();
+    const shelf = shelfHTML(h, "docentes"); assert.equal((shelf.match(/class="bib-spine bib-spine--/g) || []).length, 2); assert.match(shelf, /<b>A1<\/b>/); assert.match(shelf, /<b>B2<\/b>/); assert.doesNotMatch(shelf, /<b>A2<\/b>|<b>B1<\/b>/);
+    const detail = await chooseSection(h, "docentes"); assert.match(detail, /Guías y recursos disponibles de A1 y B2\./); assert.doesNotMatch(detail, /Speak Up/);
+  });
+  await check("empty shelves and future stories do not fabricate spine titles", async () => {
+    const h = harness("student", []); await h.view();
+    assert.doesNotMatch(h.app.innerHTML, /class="bib-spine bib-spine--/); assert.doesNotMatch(h.app.innerHTML, /Speak Up|Practice Book|Mitos|Viajes|Aventuras/);
+    const detail = await chooseSection(h, "nivel-a1"); assert.match(detail, /En preparación/); assert.doesNotMatch(detail, /Student.*Book|Speak Up/);
+  });
+  await check("story spines use escaped titles from their actual published records", async () => {
+    const h = harness("student", [{ ...book, type: "story", slug: "real-story", title: '<img src=x onerror="bad()"> Aurora' }]); await h.view();
+    const shelf = shelfHTML(h, "historias"); assert.match(shelf, /Aurora/); assert.match(shelf, /&lt;img/); assert.doesNotMatch(shelf, /<img src=x|Mitos|Aventuras/);
+  });  process.stdout.write("\n" + checked + " library UI/security checks passed.\n");
 })().catch(error => { console.error(error); process.exitCode = 1; });
