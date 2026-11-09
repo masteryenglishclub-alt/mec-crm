@@ -10,7 +10,7 @@
   window.addEventListener("hashchange", () => {
     if (["#biblioteca", "#material"].includes(location.hash) && tab !== "biblioteca") { tab = "biblioteca"; render(); }
   });
-  const render = M.wrapErr(async () => { if (M.privateFeedback) M.privateFeedback.destroyIn(app); M.$("[data-tab]").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab)); app.innerHTML = '<p class="muted">Cargando…</p>'; await views[tab](); });
+  const render = M.wrapErr(async () => { if (M.privateFeedback) M.privateFeedback.destroyIn(app); M.$$("[data-tab]").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab)); app.innerHTML = '<p class="muted">Cargando…</p>'; await views[tab](); });
 
   const views = {
     async biblioteca() { await M.biblioteca.view(app, { me, program: me.program }); },
