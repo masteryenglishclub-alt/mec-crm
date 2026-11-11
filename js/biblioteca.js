@@ -7,6 +7,19 @@
   const COURSE_TYPES = new Set(["student_book", "practice_book", "speak_up"]);
   const STAFF = new Set(["teacher", "admin"]);
   const ROLES = new Set(["student", "teacher", "admin"]);
+  const FIRST_BLOG_RESOURCE = Object.freeze({
+    id: "public-blog:entender-pero-no-recordar-b1",
+    slug: "entender-pero-no-recordar-b1",
+    title: "Entiendo inglés, pero no encuentro las palabras al hablar",
+    description: "Nivel B1 · Por Diego Gonzalez. Una práctica breve para recordar expresiones y usarlas en una conversación.",
+    type: "blog",
+    level_index: 3,
+    program: "adultos",
+    teacher_only: false,
+    published: true,
+    sort_order: -1000,
+    public_article_url: "https://masteryenglishclub-alt.github.io/mec-crm/blog-recuperar-frases.html"
+  });
   const esc = (v) => M.esc ? M.esc(v) : String(v == null ? "" : v).replace(/[&<>"']/g, (x) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[x]));
   const isStaffItem = (x) => x && (x.teacher_only === true || x.teacher_only === "true" || x.teacher_only === 1 || x.type === "teachers_book" || /(?:^|[-_/])(?:teachers?|docentes?)(?:[-_/]|$)/i.test(String(x.slug || "")));
   const isPublished = (x) => x && x.published !== false && x.published !== "false" && (!x.status || x.status === "published");
@@ -75,7 +88,8 @@
       if (!M.api || typeof M.api.libraryListItems !== "function") throw new Error("La biblioteca todavía no está disponible. Inténtalo de nuevo más tarde.");
       const received = await M.api.libraryListItems();
       if (!Array.isArray(received)) throw new Error("El catálogo recibido no es válido. Inténtalo de nuevo.");
-      catalog = visibleItems(received, role).sort(sortItems);
+      const items = received.some((x) => x && x.slug === FIRST_BLOG_RESOURCE.slug) ? received : received.concat(FIRST_BLOG_RESOURCE);
+      catalog = visibleItems(items, role).sort(sortItems);
     } catch (e) {
       if (!app.contains(loading)) return;
       app.innerHTML = '<section class="biblioteca"><div class="bib-error" role="alert"><h1>Biblioteca</h1><p>No pudimos cargar el catálogo.</p><p>' + esc(e.message || "Comprueba tu conexión e inténtalo de nuevo.") + '</p><button class="bib-button" type="button" data-bib-retry>Volver a intentar</button></div></section>';
@@ -120,7 +134,13 @@
     app.innerHTML = '<section class="biblioteca" aria-labelledby="bib-title"><div class="bib-shell"><header class="bib-hero"><div><p class="bib-eyebrow">Mastery English Club</p><h1 id="bib-title">Biblioteca</h1><p>Abre un estante. Encuentra tu próxima idea.</p></div><span class="bib-hero-seal" aria-hidden="true">MC<span>Biblioteca</span></span></header><div class="bib-tools"><label class="bib-search">' + icon("search") + '<span class="bib-sr-only">Buscar en la biblioteca</span><input type="search" data-bib-search placeholder="Buscar por título o tema…" autocomplete="off"></label><p class="bib-inventory">' + countLabel(counter, "libro disponible", "libros disponibles") + (staff ? '<span class="bib-staff-badge">' + icon("lock") + ' Vista docente</span>' : '') + '</p></div><div class="bib-cabinet" aria-label="Estantes de la biblioteca"><div class="bib-cabinet-crown"><span aria-hidden="true">✦</span> Las colecciones <span aria-hidden="true">✦</span></div><div class="bib-shelves">' + shelf + '</div><div class="bib-cabinet-base"></div></div><section class="bib-collection" id="bib-collection" tabindex="-1" aria-labelledby="bib-collection-title" hidden></section><div class="bib-media-heading"><p class="bib-eyebrow">Más maneras de descubrir</p><h2>Escucha, lee y explora</h2><p>Una biblioteca que sigue creciendo contigo.</p></div><div class="bib-media-grid"><section class="bib-media-panel" aria-labelledby="bib-podcasts-title"><div class="bib-media-icon">' + icon("audio") + '</div><h3 id="bib-podcasts-title">Podcasts</h3><p>Historias, lenguas y conversaciones para escuchar en inglés.</p><div data-bib-podcasts></div></section><section class="bib-media-panel" aria-labelledby="bib-blogs-title"><div class="bib-media-icon">' + icon("blog") + '</div><h3 id="bib-blogs-title">Blogs</h3><p>Lecturas para seguir descubriendo ideas y aprender algo nuevo.</p><div data-bib-blogs></div></section></div><section class="bib-videoteca" aria-labelledby="bib-video-title"><div class="bib-video-heading"><div><p class="bib-eyebrow">La pantalla de la biblioteca</p><h2 id="bib-video-title">Videoteca de clases</h2><p>Encuentra los vídeos por nivel y por clase.</p></div><div class="bib-video-filters"><label>Buscar clase<input type="search" data-bib-video-search placeholder="Ej.: A1.1.1 o saludos" aria-label="Buscar vídeo por clase o tema"></label><label>Nivel<select data-bib-video-level aria-label="Filtrar vídeos por nivel"><option value="">Todos los niveles</option>' + LEVELS.map((x, i) => '<option value="' + (i + 1) + '">' + x + '</option>').join("") + '</select></label></div></div><div class="bib-video-layout"><div class="bib-screen"><div class="bib-screen-inner" data-bib-player><div class="bib-screen-welcome"><span class="bib-screen-logo">MC</span><h3>Elige una clase</h3><p>Los vídeos disponibles aparecerán en esta biblioteca.</p><span class="bib-screen-play" aria-hidden="true">' + icon("play") + '</span></div></div><div class="bib-screen-ledge"><span>MEC · Videoteca</span><span aria-hidden="true">●</span></div></div><div class="bib-video-list" data-bib-videos></div></div></section><div class="bib-action-status" data-bib-status role="status" aria-live="polite"></div></div></section>';
     const root = app.querySelector(".biblioteca"), detail = root.querySelector("#bib-collection"), search = root.querySelector("[data-bib-search]"), status = root.querySelector("[data-bib-status]");
     const index = (x) => catalog.indexOf(x);
-    const itemButton = (x, label, cls) => '<button type="button" class="' + (cls || "bib-button") + '" data-bib-open="' + index(x) + '">' + esc(label || "Abrir libro") + '</button>';
+    const itemButton = (x, label, cls) => {
+      if (x && x.public_article_url) {
+        const url = safeURL(x.public_article_url, false);
+        return url ? '<a class="' + (cls || "bib-button") + '" href="' + esc(url) + '" target="_blank" rel="noopener">' + esc(label || "Leer artículo") + '</a>' : "";
+      }
+      return '<button type="button" class="' + (cls || "bib-button") + '" data-bib-open="' + index(x) + '">' + esc(label || "Abrir libro") + '</button>';
+    };
     function cards(items) {
       return '<div class="bib-book-grid">' + items.map((x) => '<article class="bib-book-card"><div class="bib-card-cover">' + cover(x) + '</div><div class="bib-card-body"><p class="bib-card-type">' + esc(TYPE[x.type]) + (LEVELS[Number(x.level_index) - 1] ? ' · ' + LEVELS[Number(x.level_index) - 1] : '') + '</p><h3>' + esc(x.title || TYPE[x.type]) + '</h3>' + (x.description ? '<p>' + esc(x.description) + '</p>' : '') + itemButton(x, x.type === "story" ? "Leer historia" : x.type === "video" ? "Ver clase" : x.type === "blog" ? "Leer artículo" : x.type === "podcast" ? "Escuchar" : "Abrir libro") + (isStaffItem(x) ? '<span class="bib-private-note">' + icon("lock") + ' Solo para docentes</span>' : '') + '</div></article>').join("") + '</div>';
     }

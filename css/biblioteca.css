@@ -75,3 +75,6 @@
 @media(prefers-reduced-motion:reduce){.biblioteca *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
 /* The class search keeps a large video collection easy to browse. */
 .bib-video-filters{display:flex;align-items:flex-end;gap:12px}.bib-video-filters input{display:block;width:215px;max-width:100%;border:1px solid #a18855;background:#0d1724;color:#f7ecdc;padding:10px 12px;border-radius:5px;font-size:.8rem}.bib-video-filters input::placeholder{color:#c0b8ac}.bib-video-filters label{font-size:.7rem;color:#d3c2a6;line-height:1.8}.bib-video-filters select{min-height:39px}@media(max-width:950px){.bib-video-heading{align-items:flex-start;flex-direction:column}.bib-video-filters{width:100%}.bib-video-filters label:first-child{flex:1}.bib-video-filters input{width:100%}}@media(max-width:620px){.bib-video-filters{gap:9px}.bib-video-filters label:last-child{width:125px;flex-shrink:0}}
+
+/* Blog público enlazado desde la Biblioteca */
+.biblioteca a.bib-text-button{text-decoration:none!important;cursor:pointer}
