@@ -108,7 +108,9 @@
       return "En este estante: " + humanList(Array.from(new Set(groupBookLabels(group)))) + ".";
     }
     function cluster(group) {
-      return '<span class="bib-book-cluster" aria-hidden="true">' + groupBookLabels(group).slice(0, 4).map((label, j) => '<span class="bib-spine bib-spine--' + (j % 4) + '"><span class="bib-spine-rule"></span><b>' + esc(label) + '</b><small>MEC</small></span>').join("") + '</span>';
+      const titles = groupBookLabels(group).slice(0, 4);
+      const vacantLabel = group.type === "level" && role === "student" && current !== group.level ? "Acceso según tu curso" : "En preparación";
+      return '<span class="bib-book-cluster" aria-hidden="true">' + (titles.length ? titles.map((label, j) => '<span class="bib-spine bib-spine--' + (j % 4) + '"><span class="bib-spine-rule"></span><b>' + esc(label) + '</b><small>MEC</small></span>').join("") : '<span class="bib-shelf-vacancy">' + esc(vacantLabel) + '</span>') + '</span>';
     }
     const shelf = groups.map((g) => {
       const active = g.type === "level" && current === g.level, available = g.items.length;
