@@ -1,23 +1,24 @@
 (function () {
-  const P = window.MEC_PRECIOS, $ = (s) => document.querySelector(s), L = P.lista, T = P.tasas;
+  const P = window.MEC_PRECIOS.personalizadas, $ = (s) => document.querySelector(s);
   const n = (v) => Math.round(v).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   const cop = (v) => "$" + n(v) + " COP";
-  const fx = (v) => { const u = v / T.copUsd, e = u * T.usdEur; return `≈ ${u.toFixed(2).replace(".", ",")} USD · ${e.toFixed(2).replace(".", ",")} EUR`; };
-  const card = (k, titulo, cnt, clases, lista, top) => `<article class="pcard${top ? " top" : ""}">
-    <div class="pdesc"><b>−${k.desc}%</b><small>Ahorro</small></div>
-    <h3>${titulo}</h3><div class="pcnt">${cnt}</div>
-    <div class="pantes"><s>${cop(lista)}</s></div><div class="pcop">${cop(k.cop)}</div>
-    <div class="pxclase">${cop(k.cop / clases)} por clase</div>
-    <div class="pfx" data-fx>${fx(k.cop)}</div></article>`;
-  const pp = P.personalizadas.paquetes, gp = P.grupales.paquetes, cp = P.combinados.paquetes;
-  $("#p-pers").innerHTML = pp.map((k, i) => card(k, "Paquete " + k.id, k.clases + " clases", k.clases, k.clases * L.pers, i === pp.length - 1)).join("");
-  $("#p-grup").innerHTML = gp.map((k, i) => card(k, "Paquete " + k.id, k.clases + " clases", k.clases, k.clases * L.grup, i === gp.length - 1)).join("");
-  $("#p-comb").innerHTML = cp.map((k, i) => card(k, "Combo " + String(k.id).replace(/^C/, ""), `${k.pers + k.grup} clases (${k.pers} personalizadas + ${k.grup} grupales)`, k.pers + k.grup, k.pers * L.pers + k.grup * L.grup, i === cp.length - 1)).join("");
-  const ps = P.personalizadas.suelta;
-  $("#s-pers").innerHTML = `Clase suelta personalizada: <s>${cop(ps.lista)}</s> <strong>${cop(ps.cop)}</strong> <span class="etq">Descuento especial ${ps.desc}%</span>`;
-  $("#s-grup").innerHTML = `Clase suelta grupal: <strong>${cop(P.grupales.suelta.cop)}</strong>`;
-  $("#nota").textContent = `Precios por estudiante, en pesos colombianos (COP), IVA incluido. Precio de lista por clase: personalizada ${cop(L.pers)}, grupal ${cop(L.grup)}. Conversión de referencia: 1 USD = ${n(T.copUsd)} COP · 1 USD = ${String(T.usdEur).replace(".", ",")} EUR.`;
-  // Modal "Aprende más": <dialog> nativo (foco atrapado, Esc cierra); devuelve el foco al botón.
+  const card = (k, top) => {
+    const base = k.clases * P.suelta.cop, ahorro = base - k.cop;
+    const porcentaje = (ahorro / base * 100).toFixed(1).replace(".", ",");
+    const porClase = k.cop / k.clases, aprox = Number.isInteger(porClase) ? "" : "≈ ";
+    return '<article class="pcard' + (top ? ' top' : '') + '" data-plan="' + k.id + '">'
+      + '<div class="pdesc"><b>−' + porcentaje + ' %</b><small>Ahorro</small></div>'
+      + '<h3>' + k.clases + ' clases</h3><div class="pcnt">Individuales · 60 minutos</div>'
+      + '<div class="pantes"><span>En clases sueltas: </span><s>' + cop(base) + '</s></div>'
+      + '<div class="pcop">' + cop(k.cop) + '</div>'
+      + '<div class="pxclase">' + aprox + cop(porClase) + ' por clase</div>'
+      + '<p class="pahorro">Ahorras <strong>' + cop(ahorro) + '</strong></p></article>';
+  };
+  const paquetes = P.paquetes;
+  $("#p-pers").innerHTML = paquetes.map((k, i) => card(k, i === paquetes.length - 1)).join("");
+  $("#s-pers").innerHTML = "1 clase suelta individual: <strong>" + cop(P.suelta.cop) + "</strong> · 60 minutos.";
+  $("#nota").textContent = "Precios por estudiante en pesos colombianos (COP), IVA incluido. Materiales originales de MEC y feedback personalizado después de cada clase incluidos. Ahorros frente a clases sueltas de $79.000. Porcentajes redondeados; ≈ indica un valor por clase aproximado.";
+  // Modal "Aprende más": <dialog> nativo; devuelve el foco al botón al cerrar.
   const dlg = $("#politicas"), btn = $("#abrir-politicas");
   if (dlg && btn) {
     btn.addEventListener("click", () => { if (dlg.showModal) dlg.showModal(); else dlg.setAttribute("open", ""); });

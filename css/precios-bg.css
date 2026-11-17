@@ -24,3 +24,9 @@ body.precios-bg2 .precios-v3::after{content:"";position:absolute;z-index:0;left:
 body.precios-bg2 .precios-v3>*:not(.precios-bg){position:relative;z-index:2}
 body.precios-bg2 footer.site{background:#1a1008;border-top:1px solid #c9a15e55}
 body.precios-bg2 .precios-v3{overflow:hidden}
+
+/* Oferta individual vigente: un solo panel, con ahorro comparado con clases sueltas. */
+body.precios-bg2 #personalizadas{max-width:1100px}
+body.precios-bg2 #personalizadas .pcop{font-size:clamp(.95rem,1.8vw,1.35rem)}
+body.precios-bg2 .pahorro{margin:10px 0 0;font-size:.8rem;color:#e8edf3}
+body.precios-bg2 .pahorro strong{display:block;margin-top:3px;color:#f0c46a;font-size:1rem}
